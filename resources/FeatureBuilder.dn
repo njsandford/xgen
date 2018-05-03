@@ -1,28 +1,17 @@
 uses data.String
 
-/* Position Independent features, fixed number of features */
-data PIFixed {
+data FeatureVector {
   int totalLines
-  int variables
-  /* Number of variables used not of input Variable type */
-  int nonInputVars
-  /* Average number of inter-variable lines */
-  int aveVarInteractions
-  int totalWhiles
-  int totalIfs
-  /* Average length of while loop */
-  int aveLoopLenth
-  /* Average length of if statements */
-  int aveStateLength
-  int highestNestingLevel
 }
 
 interface FeatureBuilder {
 
+  FeatureVector getNewFeatureVector()
+
   /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
-  PIFixed getNewFeatureVector(PIFixed current, String newLine)
+  FeatureVector updateFeatureVector(FeatureVector current, String newLine)
 
   /* Compute the distance between two vectors. */
-  int distanceBetweenVectors(PIFixed lhs, PIFixed rhs)
+  int distanceBetweenVectors(FeatureVector lhs, FeatureVector rhs)
 
 }

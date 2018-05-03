@@ -1,0 +1,68 @@
+
+
+/* Position Independent features, fixed number of features */
+data PIFixed extends FeatureVector {
+  int variables
+  /* Number of variables used not of input Variable type */
+  int nonInputVars
+  /* NOTE: May need to make this a 'total' rather than average for updating each line. */
+  /* Average number of inter-variable lines */
+  /* int aveVarInteractions */
+  int totalVarInteractions
+  int totalWhiles
+  int totalIfs
+  /* Average length of while loop */
+  int aveLoopLenth
+  /* Average length of if statements */
+  int aveStateLength
+  int highestNestingLevel
+}
+
+component provides FeatureBuilder {
+
+  PIFixed getNewFeatureVector() {
+    current.totalLines = 0
+    current.nonInputVars = 0
+    current.totalVarInteractions = 0
+    current.totalWhiles = 0
+    current.totalIfs = 0
+    current.aveLoopLenth = 0
+    current.aveStateLength = 0
+    current.highestNestingLevel = 0
+  }
+
+  /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
+  PIFixed updateFeatureVector(PIFixed current, String newLine) {
+    if (newLine == null) {
+      /* Or return 0 or -1? Or throw exception? */
+      return null
+    }
+    if (current == null) {
+      current = getNewFeatureVector()
+    }
+    current.totalLines += 1
+    current.nonInputVars +=
+    current.totalVarInteractions +=
+    current.totalWhiles +=
+    current.totalIfs +=
+    current.aveLoopLenth +=
+    current.aveStateLength +=
+    current.highestNestingLevel +=
+  }
+
+  /* Compute the distance between two vectors. */
+  int distanceBetweenVectors(PIFixed lhs, PIFixed rhs) {
+    int totalDistance
+    totalDistance += lhs.totalLines - rhs.totalLines
+    totalDistance += lhs.nonInputVars - rhs.nonInputVars
+    totalDistance += lhs.totalVarInteractions - rhs.totalVarInteractions
+    totalDistance += lhs.totalWhiles - rhs.totalWhiles
+    totalDistance += lhs.totalIfs - rhs.totalIfs
+    totalDistance += lhs.aveLoopLenth - rhs.aveLoopLenth
+    totalDistance += lhs.aveStateLength - rhs.aveStateLength
+    totalDistance += lhs.highestNestingLevel - rhs.highestNestingLevel
+    return totalDistance
+  }
+
+
+}

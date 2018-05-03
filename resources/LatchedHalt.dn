@@ -1,0 +1,9 @@
+interface LatchedHalt {
+	
+	void start(IDC com, Object o, int timeout)
+	
+	bool hasHalted()
+	
+	void cancel()
+	
+	}

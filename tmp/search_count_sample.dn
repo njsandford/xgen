@@ -1,0 +1,33 @@
+component provides Int_IntArray_Int_Function {
+	
+	int Int_IntArray_Int_Function:function(int a[], int b)
+		{
+		int increment
+		int top
+		int count
+		int ndx
+		int test
+		bool condition
+		
+		top = a.arrayLength
+		increment = 1
+		
+		condition = ndx < top
+		while (condition)
+			{
+			test = a[ndx]
+			condition = test == b
+			
+			if (condition)
+				{
+				count = count + increment
+				}
+			
+			ndx = ndx + increment
+			condition = ndx < top
+			}
+		
+		return count
+		}
+	
+	}

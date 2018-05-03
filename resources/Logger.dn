@@ -1,0 +1,10 @@
+uses data.String
+
+interface Logger {
+	
+	Logger(char filename[])
+	
+	void write(char content[])
+	void writeLines(String lines[])
+	
+	}

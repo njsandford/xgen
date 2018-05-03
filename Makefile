@@ -1,0 +1,2 @@
+default:
+	dnc . -sp tmp

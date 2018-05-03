@@ -1,0 +1,9 @@
+uses Generator
+uses UnitTest
+uses FunctionData
+
+interface CodeSearch {
+	
+	void search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut)
+	
+	}

@@ -1,0 +1,85 @@
+uses IntFunction
+
+const int HALT_TIMESTEP = 50
+
+component provides UnitTest requires data.json.JSONParser parser, io.File, data.query.Search search, composition.RecursiveLoader loader, data.IntUtil iu, io.Output out, LatchedHalt {
+	
+	JSONElement doc
+	
+	UnitTest:UnitTest(char unitTestFile[])
+		{
+		File fd = new File(unitTestFile, File.FILE_ACCESS_READ)
+		doc = parser.parseDocument(fd.read(fd.getSize()))
+		
+		doc = doc.children[0]
+		
+		if (doc.type != JSONElement.TYPE_ARRAY)
+			throw new Exception("malformed test file")
+		}
+	
+	Object getObject(IDC com, char testInterface[])
+		{
+		return new IntFunction() from com :< testInterface
+		}
+	
+	bool testFunction(IntFunction a, char name[], JSONElement test)
+		{
+		if (name == "function")
+			{
+			int formal = iu.intFromString(parser.getValue(test, "return").value)
+			int param0 = iu.intFromString(parser.getValue(test, "params").children[0].value)
+			int param1 = iu.intFromString(parser.getValue(test, "params").children[1].value)
+			
+			int actual = a.function(param0, param1)
+			
+			return formal == actual
+			}
+		
+		throw new Exception("Unknown function '$name'")
+		}
+	
+	bool UnitTest:testSingleFunction(char testComponent[], char testInterface[], char name[])
+		{
+		IDC com = loader.load(testComponent).mainComponent
+		
+		Object a = getObject(com, testInterface)
+		
+		LatchedHalt halter = new LatchedHalt()
+		halter.start(com, a, 1500)
+		
+		for (int i = 0; i < doc.children.arrayLength; i++)
+			{
+			JSONElement test = doc.children[i]
+			
+			JSONElement test_name = parser.getValue(test, "function")
+			JSONElement test_linked = parser.getValue(test, "link")
+			
+			if (test_name.value == name && test_linked.value == "false")
+				{
+				bool success = testFunction(a, name, test)
+				
+				if (!success)
+					{
+					halter.cancel()
+					return false
+					}
+				}
+			
+			if (halter.hasHalted())
+				{
+				halter.cancel()
+				return false
+				}
+			}
+		
+		halter.cancel()
+		
+		return true
+		}
+	
+	bool UnitTest:testLinkedFunctions(char testComponent[])
+		{
+		return false
+		}
+	
+	}

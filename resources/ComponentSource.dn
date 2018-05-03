@@ -1,0 +1,11 @@
+uses data.String
+
+data FunctionSource {
+	String lines[]
+	}
+
+data ComponentSource {
+	char interfaceName[]
+	String requiredInterfaces[]
+	FunctionSource functions[]
+	}

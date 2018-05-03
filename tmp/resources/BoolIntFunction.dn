@@ -1,0 +1,3 @@
+interface BoolIntFunction {
+	bool function(int a, int b)
+	}

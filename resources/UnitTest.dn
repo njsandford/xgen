@@ -1,0 +1,9 @@
+interface UnitTest {
+	
+	UnitTest(char unitTestFile[])
+	
+	bool testSingleFunction(char testComponent[], char testInterface[], char name[])
+	
+	bool testLinkedFunctions(char testComponent[])
+	
+	}

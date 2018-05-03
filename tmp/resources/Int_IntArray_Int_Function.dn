@@ -1,0 +1,3 @@
+interface Int_IntArray_Int_Function {
+	int function(int a[], int b)
+	}

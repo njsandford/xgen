@@ -1,0 +1,68 @@
+//compile a program and launch its unit test
+
+component provides TestSystem requires io.Output out, data.StringUtil stringUtil, io.FileSystem fileSystem, io.File, os.Run runner {
+	
+	void printLines(String lines[])
+		{
+		for (int i = 0; i < lines.arrayLength; i++)
+			{
+			out.println(lines[i].string)
+			}
+		}
+	
+	String[] TestSystem:makeComponentSource(ComponentSource src)
+		{
+		String lines[]
+		
+		char chdr[]
+		
+		chdr = "component provides $(src.interfaceName) "
+		
+		if (src.requiredInterfaces.arrayLength > 0)
+			{
+			chdr = new char[](chdr, "requires")
+			for (int i = 0; i < src.requiredInterfaces.arrayLength; i++)
+				{
+				if (i > 0) chdr = new char[](chdr, ",")
+				chdr = new char[](chdr, " $(src.requiredInterfaces[i].string)")
+				}
+			}
+		
+		lines = new String[](new String(chdr))
+		
+		lines = new String[](lines, new String("{"))
+		
+		for (int i = 0; i < src.functions.arrayLength; i++)
+			{
+			lines = new String[](lines, src.functions[i].lines)
+			}
+		
+		lines = new String[](lines, new String("}"))
+		
+		return lines
+		}
+	
+	bool TestSystem:testFunction(String src[], char buildFolder[], char tmpName[], UnitTest tester, char buildInterface[], char functionName[])
+		{
+		char code[] = stringUtil.implode(src, "\r\n")
+		
+		if (fileSystem.exists("$(buildFolder)/$tmpName.dn"))
+			fileSystem.delete("$(buildFolder)/$tmpName.dn")
+		
+		File fd = new File("$(buildFolder)/$tmpName.dn", File.FILE_ACCESS_WRITE)
+		fd.write(code)
+		fd.close()
+		
+		bool compile = runner.execute("dnc $(buildFolder)/$tmpName.dn -sp $buildFolder > nul 2>&1").result == 0
+		
+		if (!compile)
+			{
+			out.println(" -- compile failed --")
+			printLines(src)
+			return false
+			}
+		
+		return tester.testSingleFunction("$(buildFolder)/$tmpName.o", buildInterface, functionName)
+		}
+	
+	}

@@ -1,0 +1,3 @@
+interface IntFunction {
+	int function(int a, int b)
+	}

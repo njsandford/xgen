@@ -1,0 +1,1909 @@
+//NOTE: could separate the "clock hands" concept into a utility component...
+
+uses reflect.Type
+
+const byte XTYPE_VAR = 100
+
+data DataType {
+	char name[]
+	char package[]
+	Type type
+	}
+
+//224 bytes each
+data Node extends Option
+	{
+	int inScope[]
+	SearchScope subLines[]
+	bool declarationsComplete
+	bool blankLines
+	}
+
+data PermutationSet {
+	int totalLines
+	int limit
+	int found
+	Node nodes[]
+	Node nextNode
+	}
+
+data GlobalAPI {
+	char name[]
+	DataType t
+	}
+
+data SearchScope {
+	Node root
+	int subLinesCount
+	int subLinesStart
+	Node options[]
+	}
+
+data Variable {
+	char name[]
+	int typeIndex
+	}
+
+data Operation {
+	Variable newVar
+	char line[]
+	int subLinesCount
+	}
+
+data ParamOptions {
+	String options[]
+	}
+
+data ClockHand {
+	int current
+	int max
+	}
+
+data ScopeStackItem {
+	int ins[]
+	int remainingLines
+	int totalLines
+	ScopeStackItem next
+	}
+
+data Function {
+	char name[]
+	Type returnType
+	Type parameters[]
+	}
+
+const int HOST_INT_SIZE = 8
+const int HOST_DEC_SIZE = 16
+
+component provides Generator requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search search, io.FileSystem fileSystem, io.File, os.SystemInfo sysInfo, doc.DocBuilder {
+
+	DataType types[] = new DataType[](
+									new DataType("int", null, new Type(Type.INTEGER, 0, HOST_INT_SIZE)),
+									new DataType("dec", null, new Type(Type.DECIMAL, 0, HOST_DEC_SIZE)),
+									new DataType("char", null, new Type(Type.INTEGER, Type.F_CHAR, 1)),
+									new DataType("bool", null, new Type(Type.INTEGER, Type.F_BOOL, 1)),
+									new DataType("void", null, new Type(Type.INTEGER, 0, 0)),
+									new DataType("Data", null, new Type(Type.DATA, 0, 0))
+									)
+
+	Function functions[]
+
+	Function operators[]
+
+	GlobalAPI globalObjects[]
+	GlobalAPI instantiableObjects[]
+
+	char providedInterfaceType[]
+
+	String searchDirectories[]
+
+	Generator:Generator(String searchPaths[])
+		{
+		addArrayTypes()
+
+		searchDirectories = searchPaths
+
+		addResource("Object")
+
+		addCoreFunctions()
+		}
+
+	void Generator:setProvidedInterface(char type[])
+		{
+		providedInterfaceType = type
+
+		addResource(type)
+		}
+
+	void addArrayTypes()
+		{
+		for (int i = 0; i < types.arrayLength; i++)
+			{
+			if (types[i].type.class != Type.ARRAY)
+				{
+				types = new DataType[]( types, new DataType("$(types[i].name)[]", types[i].package, new Type( Type.ARRAY, 0, 0, new Field[](new Field(types[i].type)) ) ) )
+				}
+			}
+		}
+
+	void addArrayType(DataType t)
+		{
+		if (t.type.class != Type.ARRAY)
+			{
+			types = new DataType[]( types, new DataType("$(t.name)[]", t.package, new Type( Type.ARRAY, 0, 0, new Field[](new Field(t.type)) ) ) )
+			}
+		}
+
+	void addCoreFunctions()
+		{
+		Function nf
+
+		nf = new Function("+", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("*", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("/", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("-", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("%", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("+", getType("dec").type, new Type[](getType("dec").type, getType("dec").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("*", getType("dec").type, new Type[](getType("dec").type, getType("dec").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("/", getType("dec").type, new Type[](getType("dec").type, getType("dec").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("-", getType("dec").type, new Type[](getType("dec").type, getType("dec").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("|", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("&", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("^", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("~", getType("int").type, new Type[](getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("<<", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function(">>", getType("int").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("===", getType("bool").type, new Type[](getType("Object").type, getType("Object").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("!==", getType("bool").type, new Type[](getType("Object").type, getType("Object").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("===", getType("bool").type, new Type[](getType("Data").type, getType("Data").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("!==", getType("bool").type, new Type[](getType("Data").type, getType("Data").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function(">", getType("bool").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("<", getType("bool").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function(">=", getType("bool").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("<=", getType("bool").type, new Type[](getType("int").type, getType("int").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function(">", getType("bool").type, new Type[](getType("dec").type, getType("dec").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("<", getType("bool").type, new Type[](getType("dec").type, getType("dec").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function(">=", getType("bool").type, new Type[](getType("dec").type, getType("dec").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("<=", getType("bool").type, new Type[](getType("dec").type, getType("dec").type))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("!", getType("bool").type, new Type[](getType("bool").type))
+		operators = new Function[](operators, nf)
+
+		//NOTE: the parameters of this are really "<t>", where <t> must be compatible across the two parameters
+		nf = new Function("==", getType("bool").type, new Type[](new Type(XTYPE_VAR), new Type(XTYPE_VAR)))
+		operators = new Function[](operators, nf)
+
+		nf = new Function("!=", getType("bool").type, new Type[](new Type(XTYPE_VAR), new Type(XTYPE_VAR)))
+		operators = new Function[](operators, nf)
+		}
+
+	bool isParamLinkedOperator(Function f)
+		{
+		if (f.name == "=="
+			|| f.name == "!=")
+			return true
+
+		return false
+		}
+
+	char[] findPackage(String searchPaths[], char p[])
+		{
+		char test[] = stringUtil.implode(stringUtil.explode(p, "."), "/")
+		test = new char[](test, ".dn")
+
+		if (fileSystem.exists(test))
+			return test
+
+		//try search paths
+		for (int i = 0; i < searchPaths.arrayLength; i++)
+			{
+			char result[] = new char[](searchPaths[i].string, "/resources/", test)
+
+			out.println("test: '$result'")
+
+			if (fileSystem.exists(result))
+				{
+				return result
+				}
+			}
+
+		//try central source tree
+		char result[] = new char[](sysInfo.getVariable("DANA_HOME"), "/resources/", test)
+
+		out.println("test: '$result'")
+
+		if (fileSystem.exists(result))
+			return result
+
+		return null
+		}
+
+	Type makeFunctionType(FunctionDef fd)
+		{
+		Type t = new Type(Type.FUNCTION)
+
+		//out.println(" - RT. $(fd.returnType)")
+
+		t.fields = new Field[](t.fields, new Field(getType(fd.returnType).type, null))
+
+		for (int i = 0; i < fd.params.arrayLength; i++)
+			{
+			//out.println(" - PT. $(fd.params[i].type) $(fd.params[i].displayName)")
+
+			char fname[] = fd.params[i].displayName
+			bool array = stringUtil.find(fname, "[]") != StringUtil.NOT_FOUND
+
+			if (array)
+				{
+				fname = stringUtil.subString(fname, 0, stringUtil.find(fname, "[]"))
+				t.fields = new Field[](t.fields, new Field(getType(new char[](fd.params[i].type, "[]")).type, fname))
+				}
+				else
+				{
+				t.fields = new Field[](t.fields, new Field(getType(fd.params[i].type).type, fd.params[i].name))
+				}
+			}
+
+		return t
+		}
+
+	void populateTypeStructure(DataType t, TypeDef source)
+		{
+		//build the type structure of "t" from the type structure of "source", including all sub-fields
+		// - and flatten inheritance hierarchies
+		// - also "size" types, by knowing that "int2" is of size 2 etc.
+
+		// - type class
+		if (source.class == TypeDef.INTEGER)
+			t.type.class = Type.INTEGER
+			else if (source.class == TypeDef.DECIMAL)
+			t.type.class = Type.DECIMAL
+			else if (source.class == TypeDef.DATA)
+			t.type.class = Type.DATA
+			else if (source.class == TypeDef.OBJECT)
+			t.type.class = Type.OBJECT
+
+		// - size (TODO)
+		if (source.name == "int")
+			t.type.size = HOST_INT_SIZE
+			else if (source.name == "dec")
+			t.type.size = HOST_DEC_SIZE
+			//etc.
+
+		// - fields
+		if (source.class == TypeDef.DATA)
+			{
+			DataDef dd = source
+
+			for (int i = 0; i < dd.fields.arrayLength; i++)
+				{
+				t.type.fields = new Field[](t.type.fields, new Field(getType(dd.fields[i].type).type, dd.fields[i].name))
+				}
+
+			//TODO traverse super-types, if any
+			}
+			else if (source.class == TypeDef.OBJECT)
+			{
+			InterfaceDef dd = source
+
+			for (int i = 0; i < dd.functions.arrayLength; i++)
+				{
+				out.println(" -- function $(dd.functions[i].name)")
+				t.type.fields = new Field[](t.type.fields, new Field(makeFunctionType(dd.functions[i]), dd.functions[i].name))
+				}
+
+			//TODO traverse super-types, if any
+			}
+		}
+
+	void addGlobalObject(DataType t)
+		{
+		int n = globalObjects.arrayLength
+		char vn[] = "gv_$(iu.intToString(n))"
+
+		globalObjects = new GlobalAPI[](globalObjects, new GlobalAPI(vn, t))
+		}
+
+	void addInstantiableObject(DataType dt)
+		{
+		instantiableObjects = new GlobalAPI[](instantiableObjects, new GlobalAPI(dt.name, dt))
+		}
+
+	char[] makeNewLine(Operation op)
+		{
+		return op.line
+		}
+
+	DataType getType(char name[])
+		{
+		//TODO: need GC-CRCs for this:
+		//DataType res[] = search.search(types, DataType.[name], new DataType(name))
+
+		for (int i = 0; i < types.arrayLength; i++)
+			{
+			if (types[i].name == name)
+				return types[i]
+			}
+
+		return null
+
+		/*
+		if (res != null)
+			return res[0]
+			else
+			return null
+		*/
+		}
+
+	char[] getTypeName(Type t)
+		{
+		for (int i = 0; i < types.arrayLength; i++)
+			{
+			if (types[i].type === t)
+				return types[i].name
+			}
+
+		return null
+		}
+
+	int getTypeIndex(Type t)
+		{
+		for (int i = 0; i < types.arrayLength; i++)
+			{
+			if (types[i].type === t)
+				return i
+			}
+
+		return INT_MAX
+		}
+
+	//TODO: handle type recursion
+	//note: this function is how a compile-time type check works; an "equivalent" runtime type check may still fail & cause an exception
+	// - note this check assumes that "a" is the thing being assigned *into*, from "b" (this "direction" is important)
+	bool typesCompatible(Type a, Type b)
+		{
+		if (a === b)
+			return true
+
+		if (a.class != b.class)
+			{
+			return false
+			}
+			else
+			{
+			if (a.class == Type.ARRAY)
+				{
+				a = a.fields[0].type
+				b = b.fields[0].type
+
+				if (!typesMatch(a, b))
+					return false
+					else
+					return true
+				}
+				else if (a.class == Type.DATA)
+				{
+				//field counts don't have to match, since the variable might be set to a subtype at runtime
+				// - however, for any fields that *are* here, they must exactly match
+				for (int i = 0; i < a.fields.arrayLength && i < b.fields.arrayLength; i++)
+					{
+					if (!typesMatch(a.fields[i].type, b.fields[i].type))
+						{
+						return false
+						}
+					}
+				}
+				else if (a.class == Type.OBJECT)
+				{
+				for (int i = 0; i < a.fields.arrayLength && i < b.fields.arrayLength; i++)
+					{
+					if (!typesMatch(a.fields[i].type, b.fields[i].type))
+						{
+						return false
+						}
+					}
+				}
+				else if (a.class == Type.INTEGER)
+				{
+				//we make a special case for booleans, saying that they can't be assigned to anything but a boolean
+				// - humans can do this, if they know what they're doing, but in general a bool is restricted to 0 or 1
+				if (a.flags == Type.F_BOOL && b.flags != Type.F_BOOL)
+					return false
+				}
+			}
+
+		return true
+		}
+
+	//TODO: handle type recursion
+	bool typesMatch(Type a, Type b)
+		{
+		if (a === b)
+			return true
+
+		if (a.class != b.class)
+			{
+			return false
+			}
+			else
+			{
+			if (a.class == Type.ARRAY)
+				{
+				a = a.fields[0].type
+				b = b.fields[0].type
+
+				if (!typesMatch(a, b))
+					return false
+					else
+					return true
+				}
+
+			if (a.class == Type.INTEGER)
+				{
+				if (a.size != b.size)
+					return false
+
+				if (a.flags == Type.F_BOOL && b.flags != Type.F_BOOL)
+					return false
+				}
+				else if (a.class == Type.DECIMAL)
+				{
+				if (a.size != b.size)
+					return false
+				}
+				else if (a.class == Type.DATA || a.class == Type.OBJECT || a.class == Type.FUNCTION)
+				{
+				//field counts must exactly match, as must field contents
+				if (a.fields.arrayLength != b.fields.arrayLength)
+					return false
+
+				for (int i = 0; i < a.fields.arrayLength; i++)
+					{
+					if (!typesMatch(a.fields[i].type, b.fields[i].type))
+						{
+						return false
+						}
+					}
+				}
+			}
+
+		return true
+		}
+
+	char[] getCleanTypeName(char n[])
+		{
+		if (stringUtil.find(n, "[]") != StringUtil.NOT_FOUND)
+			{
+			n = stringUtil.subString(n, 0, stringUtil.find(n, "[]"))
+			}
+
+		return n
+		}
+
+	Operation[] generateDeclarations(int ins[])
+		{
+		Operation result[]
+
+		//one of each available type, starting from ins end
+		int si = 0
+
+		if (ins != null)
+			{
+			si = ins[ins.arrayLength-1]
+			}
+
+		for (int i = si; i < types.arrayLength; i++)
+			{
+			if (types[i].name != "void" && types[i].name != "void[]" && types[i].name != providedInterfaceType)
+				{
+				char name[] = "locv_$(iu.intToString(ins.arrayLength))"
+
+				Operation newOp
+				if (types[i].type.class == Type.ARRAY)
+					newOp = new Operation(new Variable(name, i), "$(getCleanTypeName(types[i].name)) $(name)[]")
+					else
+					newOp = new Operation(new Variable(name, i), "$(getCleanTypeName(types[i].name)) $name")
+
+				result = new Operation[](result, newOp)
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidLiterals(Type t)
+		{
+		String result[]
+
+		if (t.class == Type.INTEGER && t.flags == Type.F_BOOL)
+			{
+			result = new String[](result, new String("true"))
+			result = new String[](result, new String("false"))
+			}
+			else if (t.class == Type.INTEGER)
+			{
+			result = new String[](result, new String("0"))
+			result = new String[](result, new String("1"))
+			result = new String[](result, new String("2"))
+			result = new String[](result, new String("3"))
+			result = new String[](result, new String("4"))
+			result = new String[](result, new String("5"))
+			result = new String[](result, new String("6"))
+			result = new String[](result, new String("7"))
+			result = new String[](result, new String("8"))
+			result = new String[](result, new String("9"))
+			result = new String[](result, new String("10")) // is this needed?
+			}
+			else if (t.class == Type.DECIMAL)
+			{
+			result = new String[](result, new String("0.0"))
+			result = new String[](result, new String("0.1"))
+			result = new String[](result, new String("0.2"))
+			result = new String[](result, new String("0.3"))
+			result = new String[](result, new String("0.4"))
+			result = new String[](result, new String("0.5"))
+			result = new String[](result, new String("0.6"))
+			result = new String[](result, new String("0.7"))
+			result = new String[](result, new String("0.8"))
+			result = new String[](result, new String("0.9"))
+			result = new String[](result, new String("1.0")) // is this needed?
+			}
+
+		return result
+		}
+
+	String[] getValidVariables(int ins[], Type t)
+		{
+		String result[]
+
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			if (typesCompatible(t, types[ins[i]].type))
+				{
+				result = new String[](result, new String("locv_$(iu.intToString(i))"))
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidVariableIndices(int ins[], Type t)
+		{
+		String result[]
+
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			if (types[ins[i]].type.class == Type.ARRAY
+				&& typesCompatible(t, types[ins[i]].type.fields[0].type))
+				{
+				//find every variable we can use to index into it
+				for (int j = 0; j < ins.arrayLength; j++)
+					{
+					if (typesMatch(types[ins[j]].type, getType("int").type))
+						{
+						result = new String[](result, new String("locv_$(iu.intToString(i))[locv_$(iu.intToString(j))]"))
+						}
+					}
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidVariableFields(int ins[], Type t)
+		{
+		String result[]
+
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			if (types[ins[i]].type.class == Type.DATA)
+				{
+				//find every variable we can use to index into it
+				for (int j = 0; j < types[ins[i]].type.fields.arrayLength; j++)
+					{
+					if (typesCompatible(t, types[ins[i]].type.fields[j].type))
+						{
+						result = new String[](result, new String("locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[j].name)"))
+						}
+					}
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidArrayConcatenations(int ins[], Type t)
+		{
+		String result[]
+
+		if (t.class == Type.ARRAY)
+			{
+			//find any two variables to concatenate
+			// - they can either be two arrays of compatible types, or can be an array and a non-array of compatible types
+
+			for (int i = 0; i < ins.arrayLength; i++)
+				{
+				for (int j = 0; j < ins.arrayLength; j++)
+					{
+					//although assignment of arrays needs an exact type match, concatenation only needs element-level compatibility
+
+					Type typeA = types[ins[i]].type
+					Type typeB = types[ins[j]].type
+
+					if (typeA.class == Type.ARRAY)
+						typeA = typeA.fields[0].type
+
+					if (typeB.class == Type.ARRAY)
+						typeB = typeB.fields[0].type
+
+					if (typesCompatible(t, typeA) && typesCompatible(t, typeB) && typesCompatible(typeA, typeB))
+						{
+						char tname[] = getTypeName(t)
+						result = new String[](result, new String("new $(tname)[](locv_$(iu.intToString(i)), locv_$(iu.intToString(j)))"))
+						}
+					}
+				}
+			}
+
+		return result
+		}
+
+	String[] getParameterOptions(int ins[], Type t)
+		{
+		//TODO: just all variables and literals, plus constants from any types...maybe also .arrayLength ?
+		String result[]
+
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			if (typesCompatible(t, types[ins[i]].type))
+				{
+				result = new String[](result, new String("locv_$(iu.intToString(i))"))
+				}
+			}
+
+		//result = new String[](result, getValidLiterals(t)) //TODO???
+
+		return result
+		}
+
+	bool clockFinished(ClockHand hands[])
+		{
+		//return true if all hands are at "max"
+
+		for (int i = 0; i < hands.arrayLength; i++)
+			{
+			if (hands[i].current != hands[i].max)
+				return false
+			}
+
+		return true
+		}
+
+	void getNextClockPosition(ClockHand hands[])
+		{
+		int i = 0
+
+		while (hands[i].current == hands[i].max)
+			i ++
+
+		hands[i].current ++
+
+		i --
+		while (i != INT_MAX)
+			{
+			hands[i].current = 0
+			i --
+			}
+		}
+
+	char[] getFunctionCallOption(Function f, ParamOptions params[], ClockHand hands[])
+		{
+		char functionCall[] = f.name
+
+		functionCall = new char[](functionCall, "(")
+
+		for (int i = 0; i < hands.arrayLength; i++)
+			{
+			if (i != 0)
+				functionCall = new char[](functionCall, ",")
+
+			functionCall = new char[](functionCall, params[i].options[hands[i].current].string)
+			}
+
+		functionCall = new char[](functionCall, ")")
+
+		return functionCall
+		}
+
+	char[] getOperatorOption(Function f, ParamOptions params[], ClockHand hands[])
+		{
+		char functionCall[]
+
+		if (params.arrayLength == 1)
+			{
+			functionCall = "$(f.name) $(params[0].options[hands[0].current].string)"
+			}
+			else if (params.arrayLength == 2)
+			{
+			functionCall = "$(params[0].options[hands[0].current].string) $(f.name) $(params[1].options[hands[1].current].string)"
+			}
+
+		return functionCall
+		}
+
+	String[] getFunctionVariants(int ins[], Function f, char prefix[])
+		{
+		//out.println("generating variants for $prefix -- $(f.name)")
+
+		String result[]
+
+		if (f.parameters.arrayLength == 0)
+			return new String("$prefix$(f.name)()")
+
+		ParamOptions params[] = new ParamOptions[f.parameters.arrayLength]
+
+		for (int i = 0; i < params.arrayLength; i++)
+			{
+			params[i] = new ParamOptions()
+
+			params[i].options = getParameterOptions(ins, f.parameters[i])
+
+			if (params[i].options == null) return null
+			}
+
+		//create an array of "clock hands", where each hand has a current value and a max. value
+		ClockHand hands[] = new ClockHand[f.parameters.arrayLength]
+
+		for (int i = 0; i < hands.arrayLength; i++)
+			{
+			hands[i] = new ClockHand(0, params[i].options.arrayLength - 1)
+			}
+
+		char functionCall[] = getFunctionCallOption(f, params, hands)
+		result = new String[](result, new String("$prefix$functionCall"))
+
+		while (!clockFinished(hands))
+			{
+			getNextClockPosition(hands)
+
+			functionCall = getFunctionCallOption(f, params, hands)
+			result = new String[](result, new String("$prefix$functionCall"))
+			}
+
+		return result
+		}
+
+	String[] getOperatorVariants(int ins[], Function f)
+		{
+		//out.println("generating variants for $prefix -- $(f.name)")
+
+		String result[]
+
+		if (f.parameters.arrayLength == 0)
+			return new String("$(f.name)")
+
+		ParamOptions params[] = new ParamOptions[f.parameters.arrayLength]
+
+		if (isParamLinkedOperator(f))
+			{
+			//here, the operator takes parameters that are of any type, but all parameters must be of equivalent type
+			// - so we iterate through all known types, and see if we can fill parameters of that type
+
+			for (int n = 0; n < types.arrayLength; n++)
+				{
+				bool fail = false
+
+				for (int i = 0; i < params.arrayLength; i++)
+					{
+					params[i] = new ParamOptions()
+
+					params[i].options = getParameterOptions(ins, types[n].type)
+
+					if (params[i].options == null)
+						{
+						fail = true
+						break
+						}
+					}
+
+				if (!fail)
+					{
+					//create an array of "clock hands", where each hand has a current value and a max. value
+					ClockHand hands[] = new ClockHand[f.parameters.arrayLength]
+
+					for (int i = 0; i < hands.arrayLength; i++)
+						{
+						hands[i] = new ClockHand(0, params[i].options.arrayLength - 1)
+						}
+
+					char functionCall[] = getOperatorOption(f, params, hands)
+
+					//for <t> parameters, it's possible to re-use the exact same call if a parameter matches multiple types
+					// - here we just check that we're not repeating a selected option
+					if (search.search(result, String.[string], new String(functionCall)) == null)
+						result = new String[](result, new String(functionCall))
+
+					while (!clockFinished(hands))
+						{
+						getNextClockPosition(hands)
+
+						functionCall = getOperatorOption(f, params, hands)
+
+						if (search.search(result, String.[string], new String(functionCall)) == null)
+							result = new String[](result, new String(functionCall))
+						}
+					}
+				}
+			}
+			else
+			{
+			for (int i = 0; i < params.arrayLength; i++)
+				{
+				params[i] = new ParamOptions()
+
+				params[i].options = getParameterOptions(ins, f.parameters[i])
+
+				if (params[i].options == null) return null
+				}
+
+			//create an array of "clock hands", where each hand has a current value and a max. value
+			ClockHand hands[] = new ClockHand[f.parameters.arrayLength]
+
+			for (int i = 0; i < hands.arrayLength; i++)
+				{
+				hands[i] = new ClockHand(0, params[i].options.arrayLength - 1)
+				}
+
+			char functionCall[] = getOperatorOption(f, params, hands)
+			result = new String[](result, new String(functionCall))
+
+			while (!clockFinished(hands))
+				{
+				getNextClockPosition(hands)
+
+				functionCall = getOperatorOption(f, params, hands)
+				result = new String[](result, new String(functionCall))
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidFunctionCalls(int ins[], Type t)
+		{
+		String result[]
+
+		// - iterate through every variable that we have; for each one iterate through all function calls with a compatible return type
+		//   - for each of these, we iterate through every possible variable for each parameter of the function
+		for (int j = 0; j < functions.arrayLength; j++)
+			{
+			if (typesCompatible(t, functions[j].returnType))
+				{
+				//generate a version of this function call with every possible parameter variant
+				result = new String[](result, getFunctionVariants(ins, functions[j], ""))
+				}
+			}
+
+		for (int j = 0; j < operators.arrayLength; j++)
+			{
+			if (typesCompatible(t, operators[j].returnType))
+				{
+				//generate a version of this operator with every possible parameter variant
+				result = new String[](result, getOperatorVariants(ins, operators[j]))
+				}
+			}
+
+		//add all .arrayLength operations
+		if (typesCompatible(t, getType("int").type))
+			{
+			for (int i = 0; i < ins.arrayLength; i++)
+				{
+				if (types[ins[i]].type.class == Type.ARRAY)
+					{
+					result = new String[](result, new String("locv_$(iu.intToString(i)).arrayLength"))
+					}
+				}
+			}
+
+		return result
+		}
+
+	Function functionFromType(char name[], Type t)
+		{
+		Function f = new Function(name, t.fields[0].type)
+
+		for (int i = 1; i < t.fields.arrayLength; i++)
+			{
+			f.parameters = new Type[](f.parameters, t.fields[i].type)
+			}
+
+		return f
+		}
+
+	String[] getValidGlobalObjectFunctionCalls(int ins[], Type t)
+		{
+		String result[]
+
+		// - iterate through every variable that we have; for each one iterate through all function calls with a compatible return type
+		//   - for each of these, we iterate through every possible variable for each parameter of the function
+		for (int j = 0; j < globalObjects.arrayLength; j++)
+			{
+			for (int k = 0; k < globalObjects[j].t.type.fields.arrayLength; k++)
+				{
+				Type ft = globalObjects[j].t.type.fields[k].type
+
+				if (typesCompatible(t, ft.fields[0].type))
+					{
+					//generate a version of this function call with every possible parameter variant
+					Function fnc = functionFromType(globalObjects[j].t.type.fields[k].name, ft)
+
+					String newOps[] = getFunctionVariants(ins, fnc, "$(globalObjects[j].name).")
+
+					result = new String[](result, newOps)
+					}
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidLocalObjectFunctionCalls(int ins[], Type t)
+		{
+		String result[]
+
+		// - iterate through every variable that we have; for each one iterate through all function calls with a compatible return type
+		//   - for each of these, we iterate through every possible variable for each parameter of the function
+		for (int j = 0; j < ins.arrayLength; j++)
+			{
+			if (types[ins[j]].type.class == Type.OBJECT)
+				{
+				for (int k = 0; k < types[ins[j]].type.fields.arrayLength; k++)
+					{
+					Type ft = types[ins[j]].type.fields[k].type
+
+					if (t == null || typesCompatible(t, ft.fields[0].type))
+						{
+						//generate a version of this function call with every possible parameter variant
+						Function fnc = functionFromType(types[ins[j]].type.fields[k].name, ft)
+
+						String newOps[] = getFunctionVariants(ins, fnc, "locv_$(iu.intToString(j)).")
+
+						result = new String[](result, newOps)
+						}
+					}
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidDataInstantiations(Type t)
+		{
+		//TODO: we could allow instantiation of any sub-type of "t"...?
+
+		String result[]
+
+		if (t.class == Type.DATA)
+			{
+			result = new String[](result, new String("new $(getTypeName(t))()"))
+			}
+
+		return result
+		}
+
+	String[] getValidObjectInstantiations(int ins[], Type t)
+		{
+		//TODO: we could allow instantiation of any sub-type of "t"...?
+
+		String result[]
+
+		if (t.class == Type.OBJECT)
+			{
+			//this explicitly needs a "required" interface to have been declared
+			char tname[] = getTypeName(t)
+
+			//TODO: need GC-CRCs to do the below...
+			/*
+			GlobalAPI x[] = search.search(instantiableObjects, GlobalAPI.[name], new GlobalAPI(tname))
+
+			if (x != null)
+				{
+				//enumerate every possible way of calling the constructor
+				Field cf = search.search(t.fields, Field.[name], new Field(null, tname))[0]
+
+				Function fnc = functionFromType(cf.name, cf.type)
+
+				result = new String[](result, getFunctionVariants(ins, fnc, "new "))
+				}
+			*/
+
+			GlobalAPI candidate
+
+			for (int i = 0; i < instantiableObjects.arrayLength; i++)
+				{
+				if (instantiableObjects[i].name == tname)
+					{
+					candidate = instantiableObjects[i]
+					break
+					}
+				}
+
+			if (candidate != null)
+				{
+				Type conType
+
+				for (int i = 0; i < t.fields.arrayLength; i++)
+					{
+					if (t.fields[i].name == tname)
+						{
+						conType = t.fields[i].type
+						break
+						}
+					}
+
+				Function fnc = functionFromType(tname, conType)
+
+				result = new String[](result, getFunctionVariants(ins, fnc, "new "))
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidArrayClones(int ins[], Type t)
+		{
+		String result[]
+
+		if (t.class == Type.ARRAY)
+			{
+			for (int i = 0; i < ins.arrayLength; i++)
+				{
+				if (types[ins[i]].type.class == Type.ARRAY && typesMatch(t, types[ins[i]].type))
+					{
+					result = new String[](result, new String("clone locv_$(iu.intToString(i))"))
+					}
+				}
+			}
+
+		return result
+		}
+
+	String[] getValidDataClones(int ins[], Type t)
+		{
+		String result[]
+
+		//NOTE: in this case we can actually do sub-type cloning...?
+		if (t.class == Type.DATA)
+			{
+			for (int i = 0; i < ins.arrayLength; i++)
+				{
+				if (types[ins[i]].type.class == Type.DATA && typesMatch(t, types[ins[i]].type))
+					{
+					result = new String[](result, new String("clone locv_$(iu.intToString(i))"))
+					}
+				}
+			}
+
+		return result
+		}
+
+  /* creates a string array of all possible valid assignments */
+	String[] getValidAssignments(int ins[], Type t)
+		{
+		String result[]
+
+		//from literal values
+		result = new String[](result, getValidLiterals(t))
+
+		//from variables
+		result = new String[](result, getValidVariables(ins, t))
+
+		//from array indices of variables
+		result = new String[](result, getValidVariableIndices(ins, t))
+
+		//from fields of variables
+		result = new String[](result, getValidVariableFields(ins, t))
+
+		//from new instantiations of data types
+		result = new String[](result, getValidDataInstantiations(t))
+
+		//from new instantiations of object types
+		result = new String[](result, getValidObjectInstantiations(ins, t))
+
+		//from new instantiations of array types by size, using available integer sizes (TODO)
+
+		//from concatenations of arrays
+		result = new String[](result, getValidArrayConcatenations(ins, t))
+
+		//from cloned arrays / data
+		result = new String[](result, getValidArrayClones(ins, t))
+		result = new String[](result, getValidDataClones(ins, t))
+
+		//from function call results (including pseudo-functions representing operators)
+		result = new String[](result, getValidFunctionCalls(ins, t))
+
+		//from object call results, from any in-scope objects (global/local)
+		result = new String[](result, getValidGlobalObjectFunctionCalls(ins, t))
+		result = new String[](result, getValidLocalObjectFunctionCalls(ins, t))
+
+		return result
+		}
+
+	Operation[] generateAssignments(int ins[])
+		{
+		Operation result[]
+
+		//search for all things that can assign into one of our in-scope variables
+		// -- (or TO or FROM an index of an array variable, where the index is from X)
+		// -- including data types, where we can assign to/from their fields
+
+		//scan every variable, and get everything of a matching type we could assign it to
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			String options[] = getValidAssignments(ins, types[ins[i]].type)
+
+			for (int j = 0; j < options.arrayLength; j++)
+				{
+				result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].string)"))
+				}
+			}
+
+		//then scan every array, and get everything we could assign an index to
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			if (types[ins[i]].type.class == Type.ARRAY)
+				{
+				Type subtype = types[ins[i]].type.fields[0].type
+
+				String options[] = getValidAssignments(ins, subtype)
+
+				for (int j = 0; j < options.arrayLength; j++)
+					{
+					//find every array index option to assign this to, by finding all "int" variables
+
+					for (int k = 0; k < ins.arrayLength; k++)
+						{
+						if (typesMatch(getType("int").type, types[ins[k]].type))
+							{
+							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)"))
+							}
+						}
+					}
+				}
+			}
+
+		//then scan every data type, and get everything we could assign each of its fields to
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			if (types[ins[i]].type.class == Type.DATA)
+				{
+				for (int n = 0; n < types[ins[i]].type.fields.arrayLength; n++)
+					{
+					Type subtype = types[ins[i]].type.fields[n].type
+
+					String options[] = getValidAssignments(ins, subtype)
+
+					for (int j = 0; j < options.arrayLength; j++)
+						{
+						result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)"))
+						}
+					}
+				}
+			}
+
+		return result
+		}
+
+	Operation[] generateLocalObjectCalls(int ins[])
+		{
+		Operation result[]
+
+		String options[] = getValidLocalObjectFunctionCalls(ins, null)
+
+		for (int j = 0; j < options.arrayLength; j++)
+			{
+			result = new Operation[](result, new Operation(null, "$(options[j].string)"))
+			}
+
+		return result
+		}
+
+	Operation[] generateReturns(int ins[], char returnType[])
+		{
+		Operation result[]
+
+		Type rt = getType(returnType).type
+
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			if (typesCompatible(types[ins[i]].type, rt))
+				{
+				result = new Operation[](result, new Operation(null, "return locv_$(iu.intToString(i))"))
+				}
+			}
+
+		return result
+		}
+
+	Operation[] generateControlBlocks(int ins[], int remainingLines)
+		{
+		Operation result[]
+
+		if (remainingLines <= 1)
+			return null
+
+		Type boolType = getType("bool").type
+
+		for (int i = 0; i < ins.arrayLength; i++)
+			{
+			if (typesMatch(boolType, types[ins[i]].type))
+				{
+				//generate every control flow block for every line length
+
+				// - if statements
+				for (int j = 1; j < remainingLines; j++)
+					{
+					result = new Operation[](result, new Operation(null, "if (locv_$(iu.intToString(i)))", j))
+					}
+
+				// - while loops
+				for (int j = 1; j < remainingLines; j++)
+					{
+					result = new Operation[](result, new Operation(null, "while (locv_$(iu.intToString(i)))", j))
+					}
+
+				//NOTE: we may want to add " == false" versions too...
+				}
+			}
+
+		return result
+		}
+
+	Operation[] generateOperations(int ins[], int remainingLines, bool noDeclarations, bool blank, bool outerScope)
+		{
+		Operation result[]
+
+		if (!blank)
+			{
+			//all declarations of new variables, of every possible type
+			if (!noDeclarations)
+				result = new Operation[](result, generateDeclarations(ins))
+
+			//all assignments of any in-scope variable to X (where X is any in-scope variable, or any function call, or any literal from a subsampled set of options)
+			// - function parameters will need every option from X, up to a max. nesting depth
+			result = new Operation[](result, generateAssignments(ins))
+
+			//all function calls on objects (not using their return values)
+			result = new Operation[](result, generateLocalObjectCalls(ins))
+
+			//all return options (TODO)
+
+			//all calls of local functions (TODO)
+
+			//all control flow blocks, using X (boolean) in its header, of every possible length from 1 to (max_lines - here)
+			result = new Operation[](result, generateControlBlocks(ins, remainingLines))
+			}
+
+		//blank lines (note, there's no point creating these for sub-scopes, as these are already length-controlled separately)
+		if (outerScope) result = new Operation[](result, new Operation(null, null, 0))
+
+		return result
+		}
+
+	Node[] buildNextLine(Node n, int remainingLines, bool outerScope)
+		{
+		Node result[]
+
+		Operation ops[] = generateOperations(n.inScope, remainingLines, n.declarationsComplete, n.blankLines, outerScope)
+
+		for (int j = 0; j < ops.arrayLength; j++)
+			{
+			char newLine[] = makeNewLine(ops[j])
+
+			int newins[]
+
+			if (ops[j].newVar == null)
+				newins = n.inScope
+				else
+				newins = new int[](n.inScope, ops[j].newVar.typeIndex)
+
+			SearchScope newss[]
+
+			if (ops[j].subLinesCount > 0)
+				newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, newins), ops[j].subLinesCount))
+				else
+				newss = n.subLines
+
+			Node newNode = clone n
+			newNode.inScope = newins
+			newNode.subLines = newss
+
+			if (ops[j].newVar == null) newNode.declarationsComplete = true
+			if (ops[j].line == null) newNode.blankLines = true
+
+			result = new Node[](result, newNode)
+			}
+
+		return result
+		}
+
+	Node[] buildReturns(Node n, char returnType[])
+		{
+		Node result[]
+
+		Operation ops[] = generateReturns(n.inScope, returnType)
+
+		for (int j = 0; j < ops.arrayLength; j++)
+			{
+			char newLine[] = makeNewLine(ops[j])
+
+			int newins[]
+
+			if (ops[j].newVar == null)
+				newins = n.inScope
+				else
+				newins = new int[](n.inScope, ops[j].newVar.typeIndex)
+
+			SearchScope newss[]
+
+			if (ops[j].subLinesCount > 0)
+				newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, newins), ops[j].subLinesCount))
+				else
+				newss = n.subLines
+
+			Node newNode = new Node(null, newins)
+			newNode.subLines = newss
+			result = new Node[](result, newNode)
+			}
+
+		return result
+		}
+
+	Node[] removeFirstCells(Node of[], int count)
+		{
+		if (count == 0) return of
+
+		int remainder = of.arrayLength - count
+		Node result[] = new Node[remainder]
+
+		for (int i = 0; i < remainder; i++)
+			{
+			result[i] = of[count+i]
+			}
+
+		return result
+		}
+
+	int[] removeFirstIntCells(int of[], int count)
+		{
+		if (count == 0) return of
+
+		int remainder = of.arrayLength - count
+		int result[] = new int[remainder]
+
+		for (int i = 0; i < remainder; i++)
+			{
+			result[i] = of[count+i]
+			}
+
+		return result
+		}
+
+	//NOTE: this function operates by "return" purely because adding to a global array within "ps" is super slow
+	// (as it tends to expand an already-big array, rather than expanding incrementally smaller arrays as it goes)
+	Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, bool addReturn)
+		{
+		Node programs[]
+
+		if (lineCount > 0)
+			{
+			Node options[] = buildNextLine(start, lineCount, addReturn)
+			//Node options[] = buildTree_summary(start, lineCount)
+			int offset = 0
+
+			if (fastForward != null)
+				{
+				//discount all of the options before the FF point
+				options = removeFirstCells(options, fastForward.lines[ps.totalLines - lineCount])
+				offset = fastForward.lines[ps.totalLines - lineCount]
+				}
+
+			for (int i = 0; i < options.arrayLength; i++)
+				{
+				int set = offset+i
+				// NOTE: Compute similarity/distance to feature vector
+				options[i].lines = new int[](start.lines, set)
+
+				int continueLineCount = lineCount - 1
+
+				//check for a sub-scope, and populate it if existing
+				if (options[i].subLines.arrayLength != start.subLines.arrayLength)
+					{
+					SearchScope sc = options[i].subLines[start.subLines.arrayLength]
+					sc.subLinesStart = options[i].lines.arrayLength
+
+					PermutationSet subps = new PermutationSet(sc.subLinesCount, 1)
+
+					bool subGlobalFF = false
+
+					// - apply global fast-forward, with prior lines removed
+					if (fastForward != null)
+						{
+						subps.nextNode = clone fastForward
+						subps.nextNode.lines = removeFirstIntCells(subps.nextNode.lines, sc.subLinesStart)
+						subGlobalFF = true // don't allow any sub-scopes to advance if the parent scope is resuming
+						}
+
+					continueLineCount -= sc.subLinesCount
+
+					bool moreOptions = true
+					while (moreOptions)
+						{
+						subps.found = 0
+						Node subOption[] = buildLines(subps, subps.nextNode, subGlobalFF, sc.root, returnType, sc.subLinesCount, false)
+
+						if (subOption != null)
+							{
+							//append the lines immediately from subps' only option
+							Node optionN = clone options[i]
+
+							optionN.lines = new int[](options[i].lines, subOption[0].lines)
+
+							//continue to populate the next line of code after the sub-scope
+							// - the use of globalFF here is really strange to work out: what it's saying is, if I'm in a sub-scope already, an we're in a fast-forward, do NOT mess with the last line of this sub-scope, because the "resume" point of a fast-forward is ALWAYS from the last line of the function (i.e. the return); nothing else is allowed to move -- because last-line-returns completely ignore globalFF, this only gets noticed if we're on the last line of a sub-scope, where we *don't* want to skip the option
+							Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, addReturn)
+
+							if (childOptions != null) programs = new Node[](programs, childOptions)
+
+							if (ps.found == ps.limit)
+								return programs
+							}
+							else
+							{
+							moreOptions = false
+							}
+
+						fastForward = null
+						subGlobalFF = false
+						}
+					}
+					else
+					{
+					//continue to populate the next line of code
+					Node childOptions[] = buildLines(ps, fastForward, globalFF, options[i], returnType, continueLineCount, addReturn)
+
+					if (childOptions != null) programs = new Node[](programs, childOptions)
+
+					if (ps.found == ps.limit)
+						return programs
+					}
+
+				fastForward = null
+				}
+			}
+			else if (addReturn)
+			{
+			//add return statements, for every possible variable that matches our return type...
+			Node options[] = buildReturns(start, returnType)
+			int offset = 0
+			Node selection[]
+
+			if (fastForward != null)
+				{
+				//discount all of the options before the FF point, plus one
+				options = removeFirstCells(options, fastForward.lines[ps.totalLines - lineCount] + 1)
+				offset = fastForward.lines[ps.totalLines - lineCount] + 1
+				}
+
+			for (int i = 0; i < options.arrayLength; i++)
+				{
+				int set = offset+i
+				options[i].lines = new int[](start.lines, set)
+				selection = new Node[](selection, options[i])
+
+				ps.found ++
+
+				//ps.nodes = new Node[](ps.nodes, options[i])
+
+				if (ps.found == ps.limit)
+					{
+					ps.nextNode = options[i]
+					break
+					}
+				}
+
+			//ps.nodes = new Node[](ps.nodes, selection)
+
+			return selection
+			}
+			else
+			{
+			//ignore this option if we're in a local FF
+			if (fastForward == null || globalFF)
+				{
+				//ps.nodes = new Node[](ps.nodes, start)
+
+				ps.found = 1
+
+				ps.nextNode = start
+
+				return start
+				}
+			}
+
+		return programs
+		}
+
+	Node buildRandomLine(Node start, char returnType[], int lineCount, bool addReturn, RandomInt rgen)
+		{
+		if (lineCount > 0)
+			{
+			Node options[] = buildNextLine(start, lineCount, addReturn)
+
+			if (options == null)
+				return null
+
+			int ndx = rgen.get(options.arrayLength)
+
+			Node nxt = options[ndx]
+
+			nxt.lines = new int[](start.lines, ndx)
+
+			int continueLineCount = lineCount - 1
+
+			if (nxt.subLines.arrayLength != start.subLines.arrayLength)
+				{
+				SearchScope sc = nxt.subLines[start.subLines.arrayLength]
+				sc.subLinesStart = nxt.lines.arrayLength
+
+				continueLineCount -= sc.subLinesCount
+
+				Node subOption = buildRandomLine(sc.root, returnType, sc.subLinesCount, false, rgen)
+
+				nxt.lines = new int[](nxt.lines, subOption.lines)
+
+				return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen)
+				}
+				else
+				{
+				return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen)
+				}
+			}
+			else if (addReturn)
+			{
+			//add return statements, for every possible variable that matches our return type...
+			Node options[] = buildReturns(start, returnType)
+
+			int ndx = rgen.get(options.arrayLength)
+
+			Node nxt = options[ndx]
+
+			nxt.lines = new int[](start.lines, ndx)
+
+			return nxt
+			}
+			else
+			{
+			return start
+			}
+
+		return null
+		}
+
+	// -- public API --
+
+	void Generator:addResource(char package[])
+		{
+		//find the interface, parse it into a type (use part of DocGen for this???), add to APIs list
+		// - also note if it has a constructor, so we know whether we can have a single global instance, or need to instantiate locals
+		char filepath[] = findPackage(searchDirectories, package)
+
+		if (filepath != null)
+			{
+			// - parse the interface
+			DocBuilder db = new DocBuilder()
+			db.parseFile(filepath)
+
+			ParsedFiles pf = db.getParsedFiles()
+
+			// - add all types by name (if not existing), then add type structures
+
+			for (int i = 0; i < pf.primaryFiles.arrayLength; i++)
+				{
+				TypeDef xtypes[] = pf.primaryFiles[i].types
+
+				for (int j = 0; j < xtypes.arrayLength; j ++)
+					{
+					if (getType(xtypes[j].name) == null)
+						{
+						out.println(" -- adding type $(xtypes[j].name)")
+						types = new DataType[](types, new DataType(xtypes[j].name, package, new Type()))
+						addArrayType(types[types.arrayLength-1])
+						}
+					}
+				}
+
+			for (int i = 0; i < pf.supportFiles.arrayLength; i++)
+				{
+				TypeDef xtypes[] = pf.supportFiles[i].types
+
+				for (int j = 0; j < xtypes.arrayLength; j ++)
+					{
+					if (getType(xtypes[j].name) == null)
+						{
+						out.println(" -- adding type $(xtypes[j].name)")
+						types = new DataType[](types, new DataType(xtypes[j].name, package, new Type()))
+						addArrayType(types[types.arrayLength-1])
+						}
+					}
+				}
+
+			// - now populate type structures
+
+			for (int i = 0; i < pf.primaryFiles.arrayLength; i++)
+				{
+				TypeDef xtypes[] = pf.primaryFiles[i].types
+
+				for (int j = 0; j < xtypes.arrayLength; j ++)
+					{
+					populateTypeStructure(getType(xtypes[j].name), xtypes[j])
+					}
+				}
+
+			for (int i = 0; i < pf.supportFiles.arrayLength; i++)
+				{
+				TypeDef xtypes[] = pf.supportFiles[i].types
+
+				for (int j = 0; j < xtypes.arrayLength; j ++)
+					{
+					populateTypeStructure(getType(xtypes[j].name), xtypes[j])
+					}
+				}
+			}
+		}
+
+	void Generator:addGlobalAPI(char package[])
+		{
+		//for every object type that doesn't have a constructor, add to our global APIs
+		String parts[] = stringUtil.explode(package, ".")
+		char typeName[] = parts[parts.arrayLength-1].string
+
+		DataType dt = getType(typeName)
+
+		//check for a constructor
+		if (search.search(dt.type.fields, Field.[name], new Field(null, dt.name)) == null)
+			{
+			addGlobalObject(dt)
+			out.println(" -- global API $(dt.name)")
+			}
+			else
+			{
+			addInstantiableObject(dt)
+			}
+		}
+
+	OptionSet Generator:getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom)
+		{
+		PermutationSet ps = new PermutationSet(lineCount, maxOptions)
+
+		int ins[] = null
+
+		for (int i = 0; i < fp.parameterTypes.arrayLength; i++)
+			{
+			ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
+			}
+
+		Node root = new Node(null, ins)
+
+		Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, true)
+
+		OptionSet result = new OptionSet(options, ps.nextNode)
+
+		return result
+		}
+
+	Option Generator:getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource)
+		{
+		int ins[] = null
+
+		for (int i = 0; i < fp.parameterTypes.arrayLength; i++)
+			{
+			ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
+			}
+
+		Node root = new Node(null, ins)
+
+		Node choice = null
+
+		while (choice == null)
+			{
+			choice = buildRandomLine(clone root, fp.returnType, lineCount, true, randomSource)
+			}
+
+		return choice
+		}
+
+	String[] Generator:decodeOption(FunctionPrototype fp, Option leaf)
+		{
+		String lines[]
+
+		bool declarationsComplete
+		bool blankLines
+
+		//this is a decoder over the "lines" of leaf, building our variable list as we go
+		// - we'll account for scopes using a stack, and clone our variable list for each nesting depth, then drop the stack frame
+		// - note that the last line is a return, so sourced from possible returns only
+
+		//init variables in "ins" with the param count of fp
+		int ins[] = null
+
+		for (int i = 0; i < fp.parameterTypes.arrayLength; i++)
+			{
+			ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
+			}
+
+		ScopeStackItem top = new ScopeStackItem(ins, leaf.lines.arrayLength - 1)
+
+		for (int i = 0; i < leaf.lines.arrayLength; i++)
+			{
+			//get all options, use the i'th one
+			// - if it's a variable declare, add to "ins"
+
+			Operation options[]
+
+			//check if it's time to generate a return value
+			if (top.remainingLines == 0 && top.next == null)
+				options = generateReturns(top.ins, fp.returnType)
+				else
+				options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null)
+
+			Operation choice = options[leaf.lines[i]]
+
+			if (choice.newVar == null) declarationsComplete = true
+			if (choice.line == null) blankLines = true
+
+			// - if it's a sub-scope, clone ins and stack it up
+			//  - then just continue as normal until the end of the sub-scope, and wrap the sub-scope in {}
+			lines = new String[](lines, new String(choice.line))
+
+			if (choice.newVar != null)
+				{
+				top.ins = new int[](top.ins, choice.newVar.typeIndex)
+				}
+
+			top.remainingLines --
+
+			if (choice.subLinesCount != 0)
+				{
+				//stack things up
+				lines = new String[](lines, new String("{"))
+
+				ScopeStackItem newTop = new ScopeStackItem(top.ins, choice.subLinesCount, choice.subLinesCount)
+				newTop.next = top
+
+				top = newTop
+				}
+				else
+				{
+				//check for the end of a scope (or multiple scopes)
+				while (top.next != null && top.remainingLines == 0)
+				//if (top.remainingLines == 0)
+					{
+					if (top.next != null)
+						{
+						top.next.remainingLines -= top.totalLines
+						lines = new String[](lines, new String("}"))
+						}
+
+					top = top.next
+					}
+				}
+			}
+
+		// -- now build the function header and braces around the implementation
+		char fhdr[]
+
+		if (fp.interfaceMember != null)
+			fhdr = "$(fp.returnType) $(fp.interfaceMember):$(fp.name)"
+			else
+			fhdr = "$(fp.returnType) $(fp.name)"
+
+		fhdr = new char[](fhdr, "(")
+
+		//params
+		for (int i = 0; i < fp.parameterTypes.arrayLength; i++)
+			{
+			if (i > 0) fhdr = new char[](fhdr, ",")
+
+			bool arrayType = false
+			char vtype[] = fp.parameterTypes[i].string
+
+			if (stringUtil.find(vtype, "[]") != StringUtil.NOT_FOUND)
+				{
+				vtype = stringUtil.subString(vtype, 0, stringUtil.find(vtype, "[]"))
+				arrayType = true
+				}
+
+			if (!arrayType)
+				fhdr = new char[](fhdr, vtype, " ", "locv_$(iu.intToString(i))")
+				else
+				fhdr = new char[](fhdr, vtype, " ", "locv_$(iu.intToString(i))", "[]")
+			}
+
+		fhdr = new char[](fhdr, ")")
+
+		lines = new String[](new String(fhdr),
+								new String("{"),
+								lines,
+								new String("}")
+								)
+
+		return lines
+		}
+
+	String[] Generator:getRequiresList()
+		{
+		String result[]
+
+		for (int i = 0; i < globalObjects.arrayLength; i++)
+			{
+			result = new String[](result, new String("$(globalObjects[i].t.package) $(globalObjects[i].name)"))
+			}
+
+		return result
+		}
+
+	}

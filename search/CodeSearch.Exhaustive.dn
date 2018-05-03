@@ -1,0 +1,150 @@
+// - exhaustive (batched) search of independent functions
+//  - this search logs successfully working index locations, and notes every 20,000'th index reached (including the encoded option at that index) to sparsely map the space for later detailed searching and to log progress
+//  - in future we could farm this out to multiple worker nodes...
+
+const int EXS_THREAD_COUNT = 8
+
+component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu, TestSystem testSystem, Logger {
+	
+	Logger dataLog
+	Logger statusLog
+	
+	int batchSize = 20000
+	
+	FunctionSource[] primeFunctions(FunctionData functionList[], Generator generator)
+		{
+		//fill in any version of all functions
+		
+		FunctionSource foundFunctions[] = new FunctionSource[functionList.arrayLength]
+		
+		for (int i = 0; i < functionList.arrayLength; i++)
+			{
+			//NOTE: this is a surprisingly slow way to get an option, because the first option tends to have the most permutations (most variables declared)
+			// - we could either just assume that "all 0's" works (but this requires the first param to be of the function's return type), or go random instead?
+			
+			OptionSet ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, 1, null)
+			
+			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0]))
+			}
+		
+		return foundFunctions
+		}
+	
+	void printLines(String lines[])
+		{
+		for (int i = 0; i < lines.arrayLength; i++)
+			{
+			out.println(lines[i].string)
+			}
+		}
+	
+	char[] indexToString(int index, int lines[])
+		{
+		char encoded[] = iu.intToString(index)
+		encoded = new char[](encoded, "|")
+		bool needDot = false
+		
+		for (int i = 0; i < lines.arrayLength; i++)
+			{
+			if (needDot) encoded = new char[](encoded, ".")
+			
+			encoded = new char[](encoded, iu.intToString(lines[i]))
+			
+			needDot = true
+			}
+		
+		return encoded
+		}
+	
+	void searchSector(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], Generator generator, char buildFolder[], UnitTest ut, int overallOffset, int offset, int length, char tmpName[])
+		{
+		ComponentSource src = new ComponentSource()
+		src.requiredInterfaces = generator.getRequiresList()
+		src.interfaceName = buildInterface
+		src.functions = functions
+		
+		for (int i = offset; i < offset+length; i++)
+			{
+			String function[] = generator.decodeOption(spec.prototype, options[i])
+			functions[functionIndex] = new FunctionSource(function)
+			
+			//printLines(function)
+			
+			String compsrc[] = testSystem.makeComponentSource(src)
+			bool success = testSystem.testFunction(compsrc, buildFolder, tmpName, ut, buildInterface, spec.name)
+			
+			if (success)
+				{
+				char encoded[] = indexToString(overallOffset+i, options[i].lines)
+				dataLog.write(encoded)
+				}
+			}
+		}
+	
+	void exhaustiveSearch(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], int overallOffset, Generator generator, char buildFolder[], UnitTest ut)
+		{
+		int portionSize = options.arrayLength / EXS_THREAD_COUNT
+		
+		Thread pool[] = new Thread[EXS_THREAD_COUNT]
+		
+		int offset = 0
+		for (int i = 0; i < EXS_THREAD_COUNT; i++)
+			{
+			pool[i] = asynch::searchSector(buildInterface, clone functions, functionIndex, spec, options, generator, buildFolder, ut, overallOffset, offset, portionSize, "test$(iu.intToString(i))")
+			
+			offset += portionSize
+			}
+		
+		for (int i = 0; i < EXS_THREAD_COUNT; i++)
+			{
+			pool[i].join()
+			}
+		
+		searchSector(buildInterface, functions, functionIndex, spec, options, generator, buildFolder, ut, overallOffset, offset, options.arrayLength - offset, "test0")
+		}
+	
+	void CodeSearch:search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut)
+		{
+		//first get any solutions for all functions of the interface, so that the overall component will compile correctly
+		
+		FunctionSource foundFunctions[] = primeFunctions(functionList, generator)
+		
+		dataLog = new Logger("results_data.txt")
+		statusLog = new Logger("results_log.txt")
+		
+		//now start the search
+		
+		for (int i = 0; i < functionList.arrayLength; i++)
+			{
+			OptionSet ops
+			Option resumeFrom
+			Option options[]
+			int indexOffset
+			
+			FunctionData nfc = functionList[i]
+			
+			bool moreOptions = true
+			while (moreOptions)
+				{
+				ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, batchSize, resumeFrom)
+				indexOffset += options.arrayLength
+				resumeFrom = ops.resumeFrom
+				options = ops.options
+				
+				if (options.arrayLength < batchSize)
+					{
+					moreOptions = false
+					}
+				
+				exhaustiveSearch(buildInterface, foundFunctions, i, nfc, options, indexOffset, generator, buildFolder, ut)
+				
+				if (options != null)
+					{
+					char encoded[] = indexToString((indexOffset + options.arrayLength)-1, options[options.arrayLength-1].lines)
+					statusLog.write(encoded)
+					}
+				}
+			}
+		}
+	
+	}

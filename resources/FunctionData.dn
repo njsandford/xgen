@@ -1,0 +1,8 @@
+uses Generator
+
+data FunctionData {
+	char name[]
+	bool linked
+	int lineCount
+	FunctionPrototype prototype
+	}

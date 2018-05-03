@@ -1,0 +1,8 @@
+{
+"tests" :
+[
+{"function" : "function", "link" : false, "return" : 50, "params" : {"a": 10, "b" : 40}},
+{"function" : "function", "link" : false, "return" : 100, "params" : {"a": 50, "b" : 50}},
+{"function" : "function", "link" : false, "return" : 10, "params" : {"a": 4, "b" : 6}}
+]
+}

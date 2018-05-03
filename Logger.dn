@@ -1,0 +1,46 @@
+component provides Logger requires io.FileSystem fileSystem, io.File {
+	
+	Mutex logMutex = new Mutex()
+	
+	char filename[]
+	
+	Logger:Logger(char fn[])
+		{
+		filename = fn
+		
+		if (fileSystem.exists(filename))
+			fileSystem.delete(filename)
+		}
+	
+	void Logger:write(char content[])
+		{
+		mutex(logMutex)
+			{
+			File fd = new File(filename, File.FILE_ACCESS_WRITE)
+			fd.setPos(fd.getSize())
+			
+			fd.write(content)
+			fd.write("\n")
+			
+			fd.close()
+			}
+		}
+	
+	void Logger:writeLines(String content[])
+		{
+		mutex(logMutex)
+			{
+			File fd = new File(filename, File.FILE_ACCESS_WRITE)
+			fd.setPos(fd.getSize())
+			
+			for (int i = 0; i < content.arrayLength; i++)
+				{
+				fd.write(content[i].string)
+				fd.write("\n")
+				}
+			
+			fd.close()
+			}
+		}
+	
+	}

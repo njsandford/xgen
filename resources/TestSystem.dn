@@ -1,0 +1,11 @@
+uses data.String
+uses ComponentSource
+uses UnitTest
+
+interface TestSystem {
+	
+	String[] makeComponentSource(ComponentSource src)
+	
+	bool testFunction(String src[], char buildFolder[], char tmpName[], UnitTest ut, char buildInterface[], char functionName[])
+	
+	}

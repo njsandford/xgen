@@ -1,0 +1,52 @@
+//this component just stops an object if it's running for more than a given number of milliseconds
+
+const int HALT_TIMESTEP = 50
+
+component provides LatchedHalt requires time.Timer timer {
+	
+	bool halted
+	bool canceled
+	
+	Thread tHandle
+	
+	void hThread(IDC com, Object o, int timeout)
+		{
+		int elapsed = 0
+		
+		while (elapsed < timeout && !canceled)
+			{
+			timer.sleep(HALT_TIMESTEP)
+			elapsed += HALT_TIMESTEP
+			}
+		
+		//NOTE: this second loop could be avoided if we had a variant of "pauseObject" that place the object in a mode of rejecting new calls, not just holding them
+		// - we'd then call pause, then halt, and exit the function; LatchedHalt:cancel() would then call resume()...
+		halted = true
+		while (!canceled)
+			{
+			dana.halt(com, o)
+			if (!canceled) timer.sleep(HALT_TIMESTEP)
+			}
+		}
+	
+	void LatchedHalt:start(IDC com, Object o, int timeout)
+		{
+		halted = false
+		canceled = false
+		
+		tHandle = asynch::hThread(com, o, timeout)
+		}
+	
+	bool LatchedHalt:hasHalted()
+		{
+		return halted
+		}
+	
+	void LatchedHalt:cancel()
+		{
+		canceled = true
+		
+		tHandle.join()
+		}
+	
+	}

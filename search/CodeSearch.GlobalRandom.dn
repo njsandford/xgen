@@ -1,0 +1,117 @@
+// - global random search, stops on the first success
+
+const int EXS_THREAD_COUNT = 8
+
+component provides CodeSearch:GlobalRandom requires io.Output out, data.IntUtil iu, TestSystem testSystem, Logger, util.RandomInt randomInt, time.Calendar calendar {
+	
+	Logger dataLog
+	Logger statusLog
+	
+	//how many samples we take
+	int sampleCount = 100
+	
+	//the size of each sample
+	int sampleSize = 100
+	
+	FunctionSource[] primeFunctions(FunctionData functionList[], Generator generator)
+		{
+		//fill in any version of all functions
+		
+		FunctionSource foundFunctions[] = new FunctionSource[functionList.arrayLength]
+		
+		for (int i = 0; i < functionList.arrayLength; i++)
+			{
+			//NOTE: this is a surprisingly slow way to get an option, because the first option tends to have the most permutations (most variables declared)
+			// - we could either just assume that "all 0's" works (but this requires the first param to be of the function's return type), or go random instead?
+			
+			OptionSet ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, 1, null)
+			
+			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0]))
+			}
+		
+		return foundFunctions
+		}
+	
+	char[] indexToString(int index, int lines[])
+		{
+		char encoded[] = iu.intToString(index)
+		encoded = new char[](encoded, "|")
+		bool needDot = false
+		
+		for (int i = 0; i < lines.arrayLength; i++)
+			{
+			if (needDot) encoded = new char[](encoded, ".")
+			
+			encoded = new char[](encoded, iu.intToString(lines[i]))
+			
+			needDot = true
+			}
+		
+		return encoded
+		}
+	
+	bool randomSearch(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], Generator generator, char buildFolder[], UnitTest ut)
+		{
+		String requiresList[] = generator.getRequiresList()
+		
+		bool success = false
+		
+		randomInt.setSeed(calendar.getTime().millisecond)
+		
+		ComponentSource src = new ComponentSource()
+		src.requiredInterfaces = generator.getRequiresList()
+		src.interfaceName = buildInterface
+		src.functions = functions
+		
+		while (!success)
+			{
+			int nextIndex = randomInt.get(options.arrayLength)
+			
+			String function[] = generator.decodeOption(spec.prototype, options[nextIndex])
+			functions[functionIndex] = new FunctionSource(function)
+			
+			String compsrc[] = testSystem.makeComponentSource(src)
+			
+			success = testSystem.testFunction(compsrc, buildFolder, "test0", ut, buildInterface, spec.name)
+			
+			if (success)
+				{
+				out.println("Success @ $(iu.intToString(nextIndex))")
+				}
+				else
+				{
+				out.println("Fail @ $(iu.intToString(nextIndex))")
+				}
+			}
+		
+		return success
+		}
+	
+	void CodeSearch:search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut)
+		{
+		//fill in any version of all functions
+		FunctionSource foundFunctions[] = primeFunctions(functionList, generator)
+		OptionSet fsets[]
+		
+		//perform the random search for each function in turn
+		
+		for (int i = 0; i < functionList.arrayLength; i++)
+			{
+			OptionSet ops
+			
+			FunctionData nfc = functionList[i]
+			
+			ops = generator.getOptions(nfc.prototype, nfc.lineCount, 0, null)
+			
+			fsets = new OptionSet[](fsets, ops)
+			}
+		
+		for (int i = 0; i < functionList.arrayLength; i++)
+			{
+			out.println("found $(iu.intToString(fsets[i].options.arrayLength)) programs for $(functionList[i].name)")
+			
+			randomSearch(buildInterface, foundFunctions, i, functionList[i], fsets[i].options, generator, buildFolder, ut)
+			}
+		}
+	
+	}

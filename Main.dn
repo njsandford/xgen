@@ -1,98 +1,99 @@
 //NOTE: the general procedure for running a new experiment is to ensure that a human-crafted example can be written in N lines first!
 
 uses data.String
+uses FeatureBuilder
 
 uses UnitTest
 
 component provides App requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, io.FileSystem fileSystem, os.SystemInfo sysInfo, doc.DocBuilder, Generator, composition.RecursiveLoader loader, search.CodeSearch:RandomSparseSamples codeSearch {
-	
+
 	char[] findPackage(String searchPaths[], char p[])
 		{
 		char test[] = stringUtil.implode(stringUtil.explode(p, "."), "/")
 		test = new char[](test, ".dn")
-		
+
 		if (fileSystem.exists(test))
 			return test
-		
+
 		//try search paths
 		for (int i = 0; i < searchPaths.arrayLength; i++)
 			{
 			char result[] = new char[](searchPaths[i].string, "/resources/", test)
-			
+
 			out.println("test: '$result'")
-			
+
 			if (fileSystem.exists(result))
 				{
 				return result
 				}
 			}
-		
+
 		//try central source tree
 		char result[] = new char[](sysInfo.getVariable("DANA_HOME"), "/resources/", test)
-		
+
 		out.println("test: '$result'")
-		
+
 		if (fileSystem.exists(result))
 			return result
-		
+
 		return null
 		}
-	
+
 	FunctionPrototype[] getFunctionsFrom(String searchDirectories[], char package[])
 		{
 		FunctionPrototype result[]
-		
+
 		String parts[] = stringUtil.explode(package, ".")
 		char typeName[] = parts[parts.arrayLength-1].string
-		
+
 		char filepath[] = findPackage(searchDirectories, package)
-		
+
 		if (filepath != null)
 			{
 			// - parse the interface
 			DocBuilder db = new DocBuilder()
 			db.parseFile(filepath)
-			
+
 			ParsedFiles pf = db.getParsedFiles()
-			
+
 			for (int i = 0; i < pf.primaryFiles.arrayLength; i++)
 				{
 				TypeDef xtypes[] = pf.primaryFiles[i].types
-				
+
 				for (int j = 0; j < xtypes.arrayLength; j ++)
 					{
 					if (xtypes[j].class == TypeDef.OBJECT && xtypes[j].name == typeName)
 						{
 						//work through all functions
-						
+
 						InterfaceDef id = xtypes[j]
-						
+
 						for (int k = 0; k < id.functions.arrayLength; k++)
 							{
 							FunctionPrototype nfp = new FunctionPrototype(id.functions[k].name, xtypes[j].name, id.functions[k].returnType)
-							
+
 							// - add parameters
 							for (int q = 0; q < id.functions[k].params.arrayLength; q++)
 								{
 								char fname[] = id.functions[k].params[q].displayName
 								bool array = stringUtil.find(fname, "[]") != StringUtil.NOT_FOUND
-								
+
 								if (array)
 									nfp.parameterTypes = new String[](nfp.parameterTypes, new String("$(id.functions[k].params[q].type)[]"))
 									else
 									nfp.parameterTypes = new String[](nfp.parameterTypes, new String(id.functions[k].params[q].type))
 								}
-							
+
 							result = new FunctionPrototype[](result, nfp)
 							}
 						}
 					}
 				}
 			}
-		
+
 		return result
 		}
-	
+
 	void printLines(String lines[])
 		{
 		for (int i = 0; i < lines.arrayLength; i++)
@@ -100,14 +101,14 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 			out.println(lines[i].string)
 			}
 		}
-	
+
 	void printCompressedOption(Option node)
 		{
 		for (int j = 0; j < node.lines.arrayLength; j++)
 			{
 			out.print("$(iu.intToString(node.lines[j])).")
 			}
-		
+
 		out.println("")
 		}
 
@@ -119,84 +120,88 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 				{
 				out.print("$(iu.intToString(nodes[i].lines[j])).")
 				}
-			
+
 			out.println("")
 			}
 		}
-	
+
 	/*
 	void search_batchedSample(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut, int interSampleDistance, int sampleSize, int threadCount)
 		{
 		//first get any solutions for all functions of the interface, so that the overall component will compile correctly
-		
+
 		FunctionSource foundFunctions[] = primeFunctions(functionList, generator)
-		
+
 		//start at index 0, and grab the given sampleSize
 		// - then jump ahead (from 0) by interSampleDistance, and collect another sample, etc.
 		// - do this until the returned set of options has less members than the sampleSize, indicating we're at the end
-		
+
 		//TODO
 		}
 	*/
-	
+
 	int App:main(AppParam params[])
 		{
 		char buildFolder[] = "tmp"
-		
+
 		char unitTests[] = "input_addition.txt"
 		char testProgram[] = "UnitTest_Add.o"
 		char buildInterface[] = "IntFunction"
 		int lineCount = 3
-		
+
 		/*
 		char unitTests[] = "input_search_count.txt"
 		char testProgram[] = "UnitTest_SearchCount.o"
 		char buildInterface[] = "Int_IntArray_Int_Function"
 		int lineCount = 20
 		*/
-		
+
+		/* Provided feature vector */
+		FeatureVector providedFeatures = new PIFixed(26, 6, 1, 17, 1, 1, 2)
+
 		char exampleImplementation[] = null //we might take "hints" from this, e.g. global state, which functions are self-contained ...
 		String auxFiles[]// = new String[](new String("data.StringUtil"))
 		String searchDirectories[] = new String[](new String(buildFolder))
-		
+
 		IDC utc = loader.load(testProgram).mainComponent
 		UnitTest ut = new UnitTest("tmp/$unitTests") from utc :< UnitTest
-		
+
 		if (ut == null) return 1
-		
+
 		// -- initialise the code generator and search for implementations --
-		
+
 		Generator generator = new Generator(searchDirectories)
-		
+
 		generator.setProvidedInterface(buildInterface)
-		
+
 		//generator.addResource("data.StringUtil")
-		
+
 		for (int i = 0; i < auxFiles.arrayLength; i++)
 			{
 			generator.addGlobalAPI(auxFiles[i].string)
 			}
-		
+
 		// - grab the type of the provided interface, and enumerate its functions, to search for implementations of each one in turn
-		
+
+		// NOTE: add the feature vector to this:
 		FunctionPrototype functionList[] = getFunctionsFrom(searchDirectories, buildInterface)
-		
+
 		FunctionData functionDefs[]
-		
+
 		for (int i = 0; i < functionList.arrayLength; i++)
 			{
 			functionDefs = new FunctionData[](functionDefs, new FunctionData(functionList[i].name, false, lineCount, functionList[i]))
 			}
-		
+
 		out.println(" - searching...")
-		
+
 		// - now find all independent functions
-		
+
 		codeSearch.search(buildFolder, buildInterface, functionDefs, generator, ut)
-		
+
 		//TODO: find all "linked" functions
-		
+
 		return 0
 		}
-	
+
 	}

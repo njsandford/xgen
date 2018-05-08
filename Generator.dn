@@ -1,6 +1,7 @@
 //NOTE: could separate the "clock hands" concept into a utility component...
 
 uses reflect.Type
+uses FeatureBuilder.FeatureVector // Is this the right way to do it?
 
 const byte XTYPE_VAR = 100
 
@@ -17,6 +18,8 @@ data Node extends Option
 	SearchScope subLines[]
 	bool declarationsComplete
 	bool blankLines
+	char currentLine[] // The current line for this node -- may need to be changed to be a set of possible lines?
+	FeatureVector features
 	}
 
 data PermutationSet {
@@ -44,12 +47,14 @@ data Variable {
 	int typeIndex
 	}
 
-data Operation {
-	Variable newVar
+/* NOTE: I think this represents a single line of a program? */
+data Operation
+	Variable newVar // NOTE: What is this? Variable declaration?
 	char line[]
 	int subLinesCount
 	}
 
+// NOTE:
 data ParamOptions {
 	String options[]
 	}
@@ -75,7 +80,7 @@ data Function {
 const int HOST_INT_SIZE = 8
 const int HOST_DEC_SIZE = 16
 
-component provides Generator requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search search, io.FileSystem fileSystem, io.File, os.SystemInfo sysInfo, doc.DocBuilder {
+component provides Generator requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search search, io.FileSystem fileSystem, io.File, os.SystemInfo sysInfo, doc.DocBuilder, FeatureBuilder {
 
 	DataType types[] = new DataType[](
 									new DataType("int", null, new Type(Type.INTEGER, 0, HOST_INT_SIZE)),
@@ -523,6 +528,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		return true
 		}
 
+	/* NOTE: very useful method to get the name of the variable without [] */
 	char[] getCleanTypeName(char n[])
 		{
 		if (stringUtil.find(n, "[]") != StringUtil.NOT_FOUND)
@@ -1343,6 +1349,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		return result
 		}
 
+	/* NOTE: convert operations to nodes -- modify this! */
 	Node[] buildNextLine(Node n, int remainingLines, bool outerScope)
 		{
 		Node result[]
@@ -1351,11 +1358,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 		for (int j = 0; j < ops.arrayLength; j++)
 			{
-			char newLine[] = makeNewLine(ops[j])
+			char newLine[] = makeNewLine(ops[j]) // NOTE: This is the string line of code!
 
 			int newins[]
 
-			if (ops[j].newVar == null)
+			/* New inscope variables */
+			if (ops[j].newVar == null) // If
 				newins = n.inScope
 				else
 				newins = new int[](n.inScope, ops[j].newVar.typeIndex)
@@ -1465,6 +1473,16 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 				int set = offset+i
 				// NOTE: Compute similarity/distance to feature vector
+				// Things we can pass to feature builder from here:
+				// 	- Current line number
+				// 	- The current Node
+				//  - The next line
+				//  - Input params?? from fp
+				//  -
+				//  -
+				//  -
+				PIFixed featureVector = options[i].features // get the current feature vector for this node
+				PIFixed updatedFeatures = FeatureBuilder.updateFeatureVector(featureVector, )
 				options[i].lines = new int[](start.lines, set)
 
 				int continueLineCount = lineCount - 1
@@ -1551,6 +1569,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			for (int i = 0; i < options.arrayLength; i++)
 				{
 				int set = offset+i
+
+				// Measure final distance of feature vector here.
+
 				options[i].lines = new int[](start.lines, set)
 				selection = new Node[](selection, options[i])
 
@@ -1776,6 +1797,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		return choice
 		}
 
+	/* get the string value of a single line of code (used for feature building) */
+	String[] decodeLine(FunctionPrototype fp, Option leaf)
+	{
+
+	}
+
 	String[] Generator:decodeOption(FunctionPrototype fp, Option leaf)
 		{
 		String lines[]
@@ -1871,6 +1898,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			bool arrayType = false
 			char vtype[] = fp.parameterTypes[i].string
 
+			/* NOTE: could be useful for feature building */
 			if (stringUtil.find(vtype, "[]") != StringUtil.NOT_FOUND)
 				{
 				vtype = stringUtil.subString(vtype, 0, stringUtil.find(vtype, "[]"))

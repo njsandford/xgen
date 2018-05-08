@@ -1,68 +1,187 @@
+uses data.String
+uses data.StringUtil
+uses reflect.Type
 
-
-/* Position Independent features, fixed number of features */
+// Position Independent features, fixed number of features
 data PIFixed extends FeatureVector {
-  int variables
-  /* Number of variables used not of input Variable type */
+  int nonBlankLines
+  int totalVars
+  // Number of variables used not of input Variable type
   int nonInputVars
-  /* NOTE: May need to make this a 'total' rather than average for updating each line. */
-  /* Average number of inter-variable lines */
-  /* int aveVarInteractions */
+  // NOTE: May need to make this a 'total' rather than average for updating each line.
+  // Average number of inter-variable lines
+  // int aveVarInteractions
   int totalVarInteractions
   int totalWhiles
   int totalIfs
-  /* Average length of while loop */
+  // Average length of while loop
   int aveLoopLenth
-  /* Average length of if statements */
-  int aveStateLength
+  // Average length of if statements
+  int aveControlBlockLength
   int highestNestingLevel
+  // -- temporary values for getting highestNestingLevel --
+  int currentNestingLevel
+  int openBrackets // int to signal how many control blocks are currently open for counting nesting level and loop lengths
 }
+
+//224 bytes each
+data Node extends Option
+	{
+	int inScope[]
+	SearchScope subLines[]
+	bool declarationsComplete
+	bool blankLines
+	}
 
 component provides FeatureBuilder {
 
+  /* FeatureBuilder:FeatureBuilder()
+    {
+    } */
+
   PIFixed getNewFeatureVector() {
-    current.totalLines = 0
-    current.nonInputVars = 0
-    current.totalVarInteractions = 0
-    current.totalWhiles = 0
-    current.totalIfs = 0
-    current.aveLoopLenth = 0
-    current.aveStateLength = 0
-    current.highestNestingLevel = 0
+    PIFixed features = new PIFixed()
+    features.totalLines = 0 // This might be better as nonBlankLines, and have a separate value for program length?
+    features.nonBlankLines = 0
+    features.totalVars = 0
+    features.nonInputVars = 0
+    features.totalVarInteractions = 0
+    features.totalWhiles = 0
+    features.totalIfs = 0
+    features.aveLoopLenth = 0
+    features.aveControlBlockLength = 0
+    features.highestNestingLevel = 0
+    features.currentNestingLevel = 0
+    features.openBrackets = 0
+    return features
   }
 
-  /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
-  PIFixed updateFeatureVector(PIFixed current, String newLine) {
+  // get a new PIFixed feature vector for the current feature vector (of a node) plus the new line.
+  PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) {
+    PIFixed features = clone current
     if (newLine == null) {
-      /* Or return 0 or -1? Or throw exception? */
+      // Or return 0 or -1? Or throw exception?
       return null
     }
-    if (current == null) {
-      current = getNewFeatureVector()
+    if (features == null) {
+      features = getNewFeatureVector()
     }
-    current.totalLines += 1
-    current.nonInputVars +=
-    current.totalVarInteractions +=
-    current.totalWhiles +=
-    current.totalIfs +=
-    current.aveLoopLenth +=
-    current.aveStateLength +=
-    current.highestNestingLevel +=
+
+    features.totalLines += 1
+    if (features.totalLines > 0) {
+      // Non blank line
+      features = doUpdate(features, newLine, inputVarType)
+    }
+
+    return features
   }
 
-  /* Compute the distance between two vectors. */
-  int distanceBetweenVectors(PIFixed lhs, PIFixed rhs) {
+  // Compute the total distance between two vectors.
+  int FeatureBuilder:distanceBetweenVectors(PIFixed lhs, PIFixed rhs) {
+    PIFixed lhs = clone lhs
     int totalDistance
-    totalDistance += lhs.totalLines - rhs.totalLines
-    totalDistance += lhs.nonInputVars - rhs.nonInputVars
-    totalDistance += lhs.totalVarInteractions - rhs.totalVarInteractions
-    totalDistance += lhs.totalWhiles - rhs.totalWhiles
-    totalDistance += lhs.totalIfs - rhs.totalIfs
-    totalDistance += lhs.aveLoopLenth - rhs.aveLoopLenth
-    totalDistance += lhs.aveStateLength - rhs.aveStateLength
-    totalDistance += lhs.highestNestingLevel - rhs.highestNestingLevel
+    totalDistance += getAbsValue(lhs.totalLines - rhs.totalLines)
+    totalDistance += getAbsValue(lhs.nonBlankLines - rhs.nonBlankLines)
+    totalDistance += getAbsValue(lhs.totalVars - rhs.totalVars)
+    totalDistance += getAbsValue(lhs.nonInputVars - rhs.nonInputVars)
+    totalDistance += getAbsValue(lhs.totalVarInteractions - rhs.totalVarInteractions)
+    totalDistance += getAbsValue(lhs.totalWhiles - rhs.totalWhiles)
+    totalDistance += getAbsValue(lhs.totalIfs - rhs.totalIfs)
+    /* totalDistance += getAbsValue(lhs.aveLoopLenth - rhs.aveLoopLenth)
+    totalDistance += getAbsValue(lhs.aveControlBlockLength - rhs.aveControlBlockLength) */
+    totalDistance += getAbsValue(lhs.highestNestingLevel - rhs.highestNestingLevel)
     return totalDistance
   }
 
+  String[] getLineComponents(String line) {
+    return StringUtil.explode(line, " ")
+  }
+
+  PIFixed doUpdate(PIFixed current, String newLine, String inputVarType) {
+    if (current.operationType == 1) {
+      // 1 = declaration
+
+    }
+    else if (current.operationType == 2) {
+      // 2 = assignment
+
+    }
+    else if (current.operationType == 3) {
+      // 3 = if statement
+
+    }
+    else if (current.operationType == 4) {
+      // 4 = while loop
+
+    }
+    String[] tokens = getLineComponents
+    /* if (tokens.arrayLength == 1) {
+      // One token, must be either { or }, so signals a nesting level
+      if (tokens[0] == '{') {
+        current.openBrackets += 1
+        if (current.openBrackets > current.highestNestingLevel) {
+          // If current nesting level is greater than highest, update it
+          current.highestNestingLevel = current.openBrackets
+        }
+      }
+      else {
+        // Closing bracket, reduce current nesting level
+        current.openBrackets -= 1
+      }
+    } */
+    // 2 tokens is a declaration or control block
+    else if (tokens.arrayLength == 2) {
+      // If first token is a type, then it is a declaration
+      // NOTE: This can be done in buildNextLine in Generator.dn
+      if (tokens[0] == "int" || tokens[0] == "dec" || tokens[0] == "char" || tokens[0] == "bool") {
+        current.totalVars += 1
+        if (token == inputVarType) {
+          current.nonInputVars += 1
+        }
+      }
+      // Else check if a control block
+      else if (tokens[0] == "if") {
+        current.totalIfs += 1
+      }
+      else if (tokens[0] == "while") {
+         current.totalWhiles += 1
+      }
+      /* else {
+        // Must be a return statement
+        // NOTE: what would be appropriate here, if anything?
+      } */
+    }
+    // -- Not a declaration or control block --
+    else if (tokens.arrayLength >= 3) {
+      // 3 tokens is assignment
+      if (tokens[1] == "=") {
+        // Assignment statement
+        if (tokens.arrayLength == 3) {
+          if (tokens[0] != tokens[2]) {
+            totalVarInteractions += 1
+          }
+        }
+        else if (tokens.arrayLength == 5) {
+          if (tokens[0] != tokens[2] && tokens[2] != tokens[4]) {
+            current.totalVarInteractions += 3
+          }
+          else if (tokens[0] != tokens[2] || tokens[2] != tokens[4]) {
+            current.totalVarInteractions += 2
+          }
+          else {
+            current.totalVarInteractions += 1
+          }
+        }
+      }
+    }
+    return current
+  }
+
+  int getAbsValue(int number) {
+    if (number < 0) {
+      number = 0 - number
+    }
+    return number
+  }
 
 }

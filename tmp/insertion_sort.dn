@@ -6,22 +6,32 @@ component provides SortFunction {
         int j
         int temp
         int increment
-        /* for (i = 1; i < input.arrayLength; i++) { */
+        int previous
+        bool condition
+
         increment = 1
         i = 1
-        while (i < input.arrayLength) {
+
+        condition = i < input.arrayLength
+        while (condition)
+        {
             j = i
-            /* for(j = i  j > 0  j--){ */
-            while (j > 0) {
-                if(input[j] < input[j-1]) {
+            condition = j > 0
+            while (condition)
+            {
+                previous = j - 1
+                condition = input[j] < input[previous]
+                if (condition)
+                {
                     temp = input[j]
-                    input[j] = input[j-1]
-                    input[j-1] = temp
+                    input[j] = input[previous]
+                    input[previous] = temp
                 }
                 j = j - increment
             }
             i = i + increment
         }
+
         return input
     }
 }

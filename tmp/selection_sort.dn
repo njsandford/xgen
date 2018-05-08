@@ -8,15 +8,19 @@ component provides SortFunction {
         int smallerNumber
         int increment
 
-        /* for (i = 0; i < arr.arrayLength - 1; i++) */
         increment = 1
         i = 0
-        while (i < arr.arrayLength) {
+        condition = i < arr.arrayLength
+        while (condition)
+        {
             index = i
-            /* for (j = i + 1; j < arr.arrayLength; j++) */
             j = i + 1
-            while (j < arr.arrayLength) {
-                if (arr[j] < arr[index]) {
+            condition = j < arr.arrayLength
+            while (condition)
+            {
+                condition = arr[j] < arr[index]
+                if (condition)
+                {
                     index = j
                 }
                 j = j + increment
@@ -26,6 +30,7 @@ component provides SortFunction {
             arr[i] = smallerNumber
             i = i + increment
         }
+
         return arr
     }
 }

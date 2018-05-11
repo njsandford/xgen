@@ -16,9 +16,10 @@ data Node extends Option
 	{
 	int inScope[]
 	SearchScope subLines[]
-	bool declarationsComplete
+	bool declarationsComplete // Very useful for feature building: can do a check that enough/not too many variables exist to make the FV reachable.
 	bool blankLines
 	char currentLine[] // The current line for this node -- may need to be changed to be a set of possible lines?
+	int lineType // The type of line this is, e.g. declaration/assignment/if/while/return
 	FeatureVector features
 	}
 
@@ -51,6 +52,7 @@ data Variable {
 data Operation
 	Variable newVar // NOTE: What is this? Variable declaration?
 	char line[]
+	int lineType // The type of line this is: [0=local var call], 1=declaration, 2=assignment(NOTE: could have 2 types of assignment, e.g. a = b, and a = b + c), 3=if, 4=while, 5=return
 	int subLinesCount
 	}
 
@@ -90,6 +92,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 									new DataType("void", null, new Type(Type.INTEGER, 0, 0)),
 									new DataType("Data", null, new Type(Type.DATA, 0, 0))
 									)
+
+	FeatureBuilder featureBuilder
 
 	Function functions[]
 
@@ -559,9 +563,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 				Operation newOp
 				if (types[i].type.class == Type.ARRAY)
-					newOp = new Operation(new Variable(name, i), "$(getCleanTypeName(types[i].name)) $(name)[]")
+					newOp = new Operation(new Variable(name, i), "$(getCleanTypeName(types[i].name)) $(name)[]", 1)
 					else
-					newOp = new Operation(new Variable(name, i), "$(getCleanTypeName(types[i].name)) $name")
+					newOp = new Operation(new Variable(name, i), "$(getCleanTypeName(types[i].name)) $name", 1)
 
 				result = new Operation[](result, newOp)
 				}
@@ -1203,7 +1207,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 			for (int j = 0; j < options.arrayLength; j++)
 				{
-				result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].string)"))
+				result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].string)", 2))
 				}
 			}
 
@@ -1224,7 +1228,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						{
 						if (typesMatch(getType("int").type, types[ins[k]].type))
 							{
-							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)"))
+							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)", 2))
 							}
 						}
 					}
@@ -1244,7 +1248,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 					for (int j = 0; j < options.arrayLength; j++)
 						{
-						result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)"))
+						result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)", 2))
 						}
 					}
 				}
@@ -1261,7 +1265,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 		for (int j = 0; j < options.arrayLength; j++)
 			{
-			result = new Operation[](result, new Operation(null, "$(options[j].string)"))
+			result = new Operation[](result, new Operation(null, "$(options[j].string)", 0)) // NOTE: should a local object call be given a line type? can it be a single line?
 			}
 
 		return result
@@ -1277,7 +1281,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			{
 			if (typesCompatible(types[ins[i]].type, rt))
 				{
-				result = new Operation[](result, new Operation(null, "return locv_$(iu.intToString(i))"))
+				result = new Operation[](result, new Operation(null, "return locv_$(iu.intToString(i))"), 5)
 				}
 			}
 
@@ -1302,13 +1306,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				// - if statements
 				for (int j = 1; j < remainingLines; j++)
 					{
-					result = new Operation[](result, new Operation(null, "if (locv_$(iu.intToString(i)))", j))
+					result = new Operation[](result, new Operation(null, "if (locv_$(iu.intToString(i)))", j), 3)
 					}
 
 				// - while loops
 				for (int j = 1; j < remainingLines; j++)
 					{
-					result = new Operation[](result, new Operation(null, "while (locv_$(iu.intToString(i)))", j))
+					result = new Operation[](result, new Operation(null, "while (locv_$(iu.intToString(i)))", j), 4)
 					}
 
 				//NOTE: we may want to add " == false" versions too...
@@ -1349,8 +1353,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		return result
 		}
 
-	/* NOTE: convert operations to nodes -- modify this! */
-	Node[] buildNextLine(Node n, int remainingLines, bool outerScope)
+	// NOTE: convert operations to nodes -- modify this! could a node include an operation?
+	// Maybe this is where the feature builder should be called to build features for each node? (instead of in buildLines)
+	Node[] buildNextLine(Node n, int remainingLines, bool outerScope) // , FeatureVector features) // Add the featureVector to compare current program to.
 		{
 		Node result[]
 
@@ -1361,26 +1366,36 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			char newLine[] = makeNewLine(ops[j]) // NOTE: This is the string line of code!
 
 			int newins[]
+			int newlt = ops[i].lineType
 
 			/* New inscope variables */
-			if (ops[j].newVar == null) // If
+			if (ops[j].newVar == null)
 				newins = n.inScope
 				else
 				newins = new int[](n.inScope, ops[j].newVar.typeIndex)
 
 			SearchScope newss[]
 
-			if (ops[j].subLinesCount > 0)
+			if (ops[j].subLinesCount > 0) {
 				newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, newins), ops[j].subLinesCount))
-				else
+				//newlt = // This indicates that it is a control block?
+			}
+			else {
 				newss = n.subLines
+			}
 
 			Node newNode = clone n
 			newNode.inScope = newins
 			newNode.subLines = newss
+			newNode.currentLine = newLine // Added this to be used by feature builder.
+			newNode.lineType = newlt // Added lineType var for feature builder
 
-			if (ops[j].newVar == null) newNode.declarationsComplete = true
-			if (ops[j].line == null) newNode.blankLines = true
+			if (ops[j].newVar == null) {
+				newNode.declarationsComplete = true
+			}
+			if (ops[j].line == null) {
+				newNode.blankLines = true // this could also be a count of all blank lines, where a value > 0 is equivalent to 'true'.
+			}
 
 			result = new Node[](result, newNode)
 			}
@@ -1452,7 +1467,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 	//NOTE: this function operates by "return" purely because adding to a global array within "ps" is super slow
 	// (as it tends to expand an already-big array, rather than expanding incrementally smaller arrays as it goes)
-	Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, bool addReturn)
+	Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, bool addReturn, FeatureVector desiredFeatures, int maxDeviation)
 		{
 		Node programs[]
 
@@ -1482,7 +1497,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				//  -
 				//  -
 				PIFixed featureVector = options[i].features // get the current feature vector for this node
-				PIFixed updatedFeatures = FeatureBuilder.updateFeatureVector(featureVector, )
+				PIFixed updatedFeatures = featureBuilder.updateFeatureVector(featureVector, )
 				options[i].lines = new int[](start.lines, set)
 
 				int continueLineCount = lineCount - 1
@@ -1570,12 +1585,21 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 				int set = offset+i
 
-				// Measure final distance of feature vector here.
+				// NOTE: Measure final distance of feature vector here.
+				// If the features of the current node are similar enough to the desired feature vector, add it to tree.
+				int proximityToDesiredProgram = featureBuilder.distanceBetweenVectors(desiredFeatures, options[i].features)
+				if (proximityToDesiredProgram <= maxDeviation) {
+					options[i].lines = new int[](start.lines, set)
+					selection = new Node[](selection, options[i])
 
-				options[i].lines = new int[](start.lines, set)
+					ps.found ++
+				}
+
+				// MOVED ABOVE
+				/* options[i].lines = new int[](start.lines, set)
 				selection = new Node[](selection, options[i])
 
-				ps.found ++
+				ps.found ++ */
 
 				//ps.nodes = new Node[](ps.nodes, options[i])
 
@@ -1756,6 +1780,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			}
 		}
 
+	//NOTE pass feature vector here!
 	OptionSet Generator:getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom)
 		{
 		PermutationSet ps = new PermutationSet(lineCount, maxOptions)

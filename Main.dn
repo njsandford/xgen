@@ -156,7 +156,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		int lineCount = 20
 		*/
 
-		/* Provided feature vector */
+		/* Provided feature vector for counting program */
 		FeatureVector providedFeatures = new PIFixed(26, 6, 1, 17, 1, 1, 2)
 
 		char exampleImplementation[] = null //we might take "hints" from this, e.g. global state, which functions are self-contained ...
@@ -197,6 +197,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 
 		// - now find all independent functions
 
+		// NOTE: pass feature vector here! OR do we just pass it to generator?
 		codeSearch.search(buildFolder, buildInterface, functionDefs, generator, ut)
 
 		//TODO: find all "linked" functions

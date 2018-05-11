@@ -11,9 +11,12 @@ data PIFixed extends FeatureVector {
   // NOTE: May need to make this a 'total' rather than average for updating each line.
   // Average number of inter-variable lines
   // int aveVarInteractions
-  int totalVarInteractions
+  //int totalVarInteractions // NOTE: Difficult to work out, for now just use total assignments.
+  int totalAssignments
   int totalWhiles
   int totalIfs
+  int totalFunctionCalls
+  int totalReturns // Can there be more than one?
   // Average length of while loop
   int aveLoopLenth
   // Average length of if statements
@@ -45,9 +48,11 @@ component provides FeatureBuilder {
     features.nonBlankLines = 0
     features.totalVars = 0
     features.nonInputVars = 0
-    features.totalVarInteractions = 0
+    features.totalAssignments = 0
     features.totalWhiles = 0
     features.totalIfs = 0
+    features.totalFunctionCalls = 0
+    features.totalReturns = 0
     features.aveLoopLenth = 0
     features.aveControlBlockLength = 0
     features.highestNestingLevel = 0
@@ -57,6 +62,7 @@ component provides FeatureBuilder {
   }
 
   // get a new PIFixed feature vector for the current feature vector (of a node) plus the new line.
+  // May be easier/make more sense to just pass a Node and get the feature vector from there.
   PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) {
     PIFixed features = clone current
     if (newLine == null) {
@@ -84,9 +90,10 @@ component provides FeatureBuilder {
     totalDistance += getAbsValue(lhs.nonBlankLines - rhs.nonBlankLines)
     totalDistance += getAbsValue(lhs.totalVars - rhs.totalVars)
     totalDistance += getAbsValue(lhs.nonInputVars - rhs.nonInputVars)
-    totalDistance += getAbsValue(lhs.totalVarInteractions - rhs.totalVarInteractions)
+    totalDistance += getAbsValue(lhs.totalAssignments - rhs.totalAssignments)
     totalDistance += getAbsValue(lhs.totalWhiles - rhs.totalWhiles)
     totalDistance += getAbsValue(lhs.totalIfs - rhs.totalIfs)
+    totalDistance += getAbsValue(lhs.totalFunctionCalls - rhs.totalFunctionCalls)
     /* totalDistance += getAbsValue(lhs.aveLoopLenth - rhs.aveLoopLenth)
     totalDistance += getAbsValue(lhs.aveControlBlockLength - rhs.aveControlBlockLength) */
     totalDistance += getAbsValue(lhs.highestNestingLevel - rhs.highestNestingLevel)
@@ -97,23 +104,37 @@ component provides FeatureBuilder {
     return StringUtil.explode(line, " ")
   }
 
-  PIFixed doUpdate(PIFixed current, String newLine, String inputVarType) {
-    if (current.operationType == 1) {
+  // NOTE: If function overloading is possible, have separate functions for each type of FeatureVector (when more than PIFixed is available!)
+  FeatureVector doUpdate(PIFixed current, int lineType, char[] newLine, char[] inputVarType) {
+    PIFixed update = clone current
+    String[] tokens = getLineComponents()
+    if (lineType == 0) {
+      // 0 = local variable call
+      update.totalFunctionCalls += 1
+    }
+    else if (lineType == 1) {
       // 1 = declaration
-
+      if (tokens[0] == inputVarType) {
+        update.nonInputVars += 1
+      }
     }
-    else if (current.operationType == 2) {
-      // 2 = assignment
-
+    else if (lineType == 2) {
+      // 2 = assignment - we could increase the number of assignment types
+      update.totalAssignments += 1
     }
-    else if (current.operationType == 3) {
+    else if (lineType == 3) {
       // 3 = if statement
-
+      update.totalIfs += 1
     }
-    else if (current.operationType == 4) {
+    else if (lineType == 4) {
       // 4 = while loop
-
+      update.totalWhiles += 1
     }
+    else if (lineType == 5) {
+      // 5 = return
+      update.totalReturns += 1
+    }
+
     String[] tokens = getLineComponents
     /* if (tokens.arrayLength == 1) {
       // One token, must be either { or }, so signals a nesting level
@@ -134,17 +155,17 @@ component provides FeatureBuilder {
       // If first token is a type, then it is a declaration
       // NOTE: This can be done in buildNextLine in Generator.dn
       if (tokens[0] == "int" || tokens[0] == "dec" || tokens[0] == "char" || tokens[0] == "bool") {
-        current.totalVars += 1
-        if (token == inputVarType) {
-          current.nonInputVars += 1
+        update.totalVars += 1
+        if (tokens[0] == inputVarType) {
+          update.nonInputVars += 1
         }
       }
       // Else check if a control block
       else if (tokens[0] == "if") {
-        current.totalIfs += 1
+        update.totalIfs += 1
       }
       else if (tokens[0] == "while") {
-         current.totalWhiles += 1
+         update.totalWhiles += 1
       }
       /* else {
         // Must be a return statement
@@ -158,23 +179,23 @@ component provides FeatureBuilder {
         // Assignment statement
         if (tokens.arrayLength == 3) {
           if (tokens[0] != tokens[2]) {
-            totalVarInteractions += 1
+            update.totalVarInteractions += 1
           }
         }
         else if (tokens.arrayLength == 5) {
-          if (tokens[0] != tokens[2] && tokens[2] != tokens[4]) {
-            current.totalVarInteractions += 3
+          if (tokens[0] != tokens[2] && tokens[2] != tokens[4] && tokens[0] != tokens[4]) {
+            update.totalVarInteractions += 3
           }
           else if (tokens[0] != tokens[2] || tokens[2] != tokens[4]) {
-            current.totalVarInteractions += 2
+            update.totalVarInteractions += 2
           }
           else {
-            current.totalVarInteractions += 1
+            update.totalVarInteractions += 1
           }
         }
       }
     }
-    return current
+    return update
   }
 
   int getAbsValue(int number) {

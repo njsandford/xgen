@@ -1,6 +1,7 @@
 uses util.RandomInt
 
 uses data.String
+uses FeatureBuilder
 
 /* The output program interface */
 data FunctionPrototype {
@@ -22,10 +23,6 @@ data OptionSet {
 	Option resumeFrom
 	}
 
-data FeatureVector {
-	int totalLines
-}
-
 interface Generator {
 
 	Generator(String searchPaths[])
@@ -36,7 +33,7 @@ interface Generator {
 	void addResource(char path[])
 	void addGlobalAPI(char package[])
 
-	OptionSet getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom)
+	OptionSet getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 
 	Option getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource)
 

@@ -1,17 +1,60 @@
 uses data.String
+uses FunctionData
 
 data FeatureVector {
   int totalLines
 }
 
+// Position-independent features, fixed number of features
+data PIFixed extends FeatureVector {
+  int nonBlankLines
+  int totalVars
+  // Number of variables used not of input Variable type
+  int nonInputVars
+  // NOTE: May need to make this a 'total' rather than average for updating each line.
+  // Average number of inter-variable lines
+  // int aveVarInteractions
+  //int totalVarInteractions // NOTE: Difficult to work out, for now just use total assignments.
+  int totalAssignments
+  int totalWhiles
+  int totalIfs
+  int totalFunctionCalls
+  int totalReturns // Can there be more than one?
+  // Average length of while loop
+  int aveLoopLenth
+  // Average length of if statements
+  int aveControlBlockLength
+  int highestNestingLevel
+  // -- temporary values for getting highestNestingLevel --
+  Stack remainingLinesInBlock // Stack representing the lines remaining to be filled in each control block.
+}
+
+// Position-dependent features, fixed number of features
+data PDFixed extends FeatureVector {
+
+}
+
 interface FeatureBuilder {
 
-  FeatureVector getNewFeatureVector()
+  PIFixed getNewFeatureVector()
+
+  void setMaxDeviation(int _maxDeviation)
+
+  void setProvidedFeatures(PIFixed _providedFeatures)
+
+  void setFunctionData(FunctionData functionData)
 
   /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
-  FeatureVector updateFeatureVector(FeatureVector current, String newLine)
+  /* FeatureVector updateFeatureVector(FeatureVector current, String newLine) */
+  PIFixed updateFeatureVector(PIFixed currentFeatures, char newLine[], int subLinesCount) // Pass the new node, which contains the feature vector, the new line, and all information for the operation
 
   /* Compute the distance between two vectors. */
-  int distanceBetweenVectors(FeatureVector lhs, FeatureVector rhs)
+  int distanceBetweenVectors(PIFixed lhs, PIFixed rhs)
+
+  bool isProgramSimilar(PIFixed features)
+
+  bool areFeaturesReachable(PIFixed provided, PIFixed current, bool declarationsComplete)
+
+
 
 }

@@ -104,7 +104,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 		searchSector(buildInterface, functions, functionIndex, spec, options, generator, buildFolder, ut, overallOffset, offset, options.arrayLength - offset, "test0")
 		}
 
-	void CodeSearch:search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut)
+	void CodeSearch:search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut, FeatureBuilder featureBuilder)
 		{
 		//first get any solutions for all functions of the interface, so that the overall component will compile correctly
 
@@ -127,7 +127,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 			bool moreOptions = true
 			while (moreOptions)
 				{
-				ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, batchSize, resumeFrom)
+				ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, batchSize, resumeFrom, featureBuilder)
 				indexOffset += options.arrayLength
 				resumeFrom = ops.resumeFrom
 				options = ops.options

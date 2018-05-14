@@ -1,48 +1,26 @@
 uses data.String
 uses data.StringUtil
 uses reflect.Type
+uses data.adt.Stack
+uses FunctionData
+uses Generator
 
-// Position Independent features, fixed number of features
-data PIFixed extends FeatureVector {
-  int nonBlankLines
-  int totalVars
-  // Number of variables used not of input Variable type
-  int nonInputVars
-  // NOTE: May need to make this a 'total' rather than average for updating each line.
-  // Average number of inter-variable lines
-  // int aveVarInteractions
-  //int totalVarInteractions // NOTE: Difficult to work out, for now just use total assignments.
-  int totalAssignments
-  int totalWhiles
-  int totalIfs
-  int totalFunctionCalls
-  int totalReturns // Can there be more than one?
-  // Average length of while loop
-  int aveLoopLenth
-  // Average length of if statements
-  int aveControlBlockLength
-  int highestNestingLevel
-  // -- temporary values for getting highestNestingLevel --
-  int currentNestingLevel
-  int openBrackets // int to signal how many control blocks are currently open for counting nesting level and loop lengths
-}
-
-//224 bytes each
-data Node extends Option
-	{
-	int inScope[]
-	SearchScope subLines[]
-	bool declarationsComplete
-	bool blankLines
-	}
-
-component provides FeatureBuilder {
+component provides FeatureBuilder requires data.adt.Stack, data.StringUtil {
 
   /* FeatureBuilder:FeatureBuilder()
     {
     } */
 
-  PIFixed getNewFeatureVector() {
+  // The maximum ammount features vectors can differ and still be considered similar.
+  int maxDeviation
+
+  char inputVarType[]
+
+  FunctionData functionData
+
+  FeatureVector providedFeatures
+
+  PIFixed FeatureBuilder:getNewFeatureVector() {
     PIFixed features = new PIFixed()
     features.totalLines = 0 // This might be better as nonBlankLines, and have a separate value for program length?
     features.nonBlankLines = 0
@@ -56,35 +34,47 @@ component provides FeatureBuilder {
     features.aveLoopLenth = 0
     features.aveControlBlockLength = 0
     features.highestNestingLevel = 0
-    features.currentNestingLevel = 0
-    features.openBrackets = 0
+    features.remainingLinesInBlock = new Stack()
     return features
+  }
+
+  void FeatureBuilder:setMaxDeviation(int _maxDeviation) {
+    maxDeviation = _maxDeviation
+  }
+
+  void FeatureBuilder:setProvidedFeatures(PIFixed _providedFeatures) {
+    providedFeatures = _providedFeatures
+  }
+
+  void FeatureBuilder:setFunctionData(FunctionData _functionData) {
+    functionData = _functionData
   }
 
   // get a new PIFixed feature vector for the current feature vector (of a node) plus the new line.
   // May be easier/make more sense to just pass a Node and get the feature vector from there.
-  PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) {
-    PIFixed features = clone current
+  /* PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) { */
+  PIFixed FeatureBuilder:updateFeatureVector(PIFixed currentFeatures, char newLine[], int subLinesCount) { //}, String inputVarType) {
+    // Node node = clone newNode
+    //FeatureVector current = node.features
     if (newLine == null) {
       // Or return 0 or -1? Or throw exception?
       return null
     }
-    if (features == null) {
-      features = getNewFeatureVector()
+    if (currentFeatures == null) {
+      currentFeatures = getNewFeatureVector()
     }
 
-    features.totalLines += 1
-    if (features.totalLines > 0) {
+    currentFeatures.totalLines += 1
+    if (currentFeatures.totalLines > 0) {
       // Non blank line
-      features = doUpdate(features, newLine, inputVarType)
+      currentFeatures = doUpdate(currentFeatures, newLine, subLinesCount)
     }
 
-    return features
+    return currentFeatures
   }
 
   // Compute the total distance between two vectors.
   int FeatureBuilder:distanceBetweenVectors(PIFixed lhs, PIFixed rhs) {
-    PIFixed lhs = clone lhs
     int totalDistance
     totalDistance += getAbsValue(lhs.totalLines - rhs.totalLines)
     totalDistance += getAbsValue(lhs.nonBlankLines - rhs.nonBlankLines)
@@ -100,14 +90,53 @@ component provides FeatureBuilder {
     return totalDistance
   }
 
-  String[] getLineComponents(String line) {
-    return StringUtil.explode(line, " ")
+  // Decide if the provided features are reachable from the current FV.
+  // NOTE could update this to include the order of assignments made, eg. ints before bools.
+  bool FeatureBuilder:areFeaturesReachable(PIFixed provided, PIFixed current, bool declarationsComplete) {
+    if (declarationsComplete) {
+      if (provided.totalAssignments > current.totalAssignments) {
+        // Not enough assignments made, so not reachable.
+        return false
+      }
+      else return true
+    }
+    return true
+  }
+
+  bool FeatureBuilder:isProgramSimilar(PIFixed features) {
+    // If the features of the current node are similar enough to the provided feature vector, add it to tree.
+    int proximityToProvidedProgram = distanceBetweenVectors(providedFeatures, features)
+    // move this to FeatureBuilder
+    if (proximityToProvidedProgram <= maxDeviation) {
+      return true
+    }
+    else return false
+  }
+
+  String[] getLineComponents(char line[]) {
+    StringUtil stringUtil = new StringUtil()
+    String tokens[] = stringUtil.explode(line, " ")
+    return tokens
   }
 
   // NOTE: If function overloading is possible, have separate functions for each type of FeatureVector (when more than PIFixed is available!)
-  FeatureVector doUpdate(PIFixed current, int lineType, char[] newLine, char[] inputVarType) {
-    PIFixed update = clone current
-    String[] tokens = getLineComponents()
+  /* FeatureVector doUpdate(Node currentNode) { */
+  PIFixed doUpdate(PIFixed currentFeatures, char newLine[], int subLinesCount) {
+    //Node node = clone currentNode
+    PIFixed update = currentFeatures //node.features
+    //Operation lineInfo = node.lineInfo
+    String tokens[] = getLineComponents()
+    // Check if we are currently within a subscope:
+    if (update.remainingLinesInBlock.getLength() != 0) {
+      if (update.remainingLinesInBlock.peek() == 0) {
+        update.remainingLinesInBlock.remove(update.remainingLinesInBlock.peek())
+      }
+      if (update.remainingLinesInBlock.getLength() != 0) {
+        int updatedCount = update.remainingLinesInBlock.peek() - 1 // make a copy of top value and update it
+        update.remainingLinesInBlock.remove(update.remainingLinesInBlock.peek())
+        update.remainingLinesInBlock.add(updatedCount) // replace with updated value
+      }
+    }
     if (lineType == 0) {
       // 0 = local variable call
       update.totalFunctionCalls += 1
@@ -125,16 +154,29 @@ component provides FeatureBuilder {
     else if (lineType == 3) {
       // 3 = if statement
       update.totalIfs += 1
+      update.remainingLinesInBlock.add(subLinesCount)
+      // Check if current nesting level is greater than previous maximum, if so, update maximum
+      if (update.remainingLinesInBlock.getLength() > update.highestNestingLevel) {
+        update.highestNestingLevel = update.getLength()
+      }
     }
     else if (lineType == 4) {
       // 4 = while loop
       update.totalWhiles += 1
+      update.remainingLinesInBlock.add(subLinesCount)
+      // Check if current nesting level is greater than previous maximum, if so, update maximum
+      if (update.remainingLinesInBlock.getLength() > update.highestNestingLevel) {
+        update.highestNestingLevel = update.getLength()
+      }
+
     }
     else if (lineType == 5) {
       // 5 = return
       update.totalReturns += 1
     }
-
+    return update
+  }
+/*
     String[] tokens = getLineComponents
     /* if (tokens.arrayLength == 1) {
       // One token, must be either { or }, so signals a nesting level
@@ -150,7 +192,7 @@ component provides FeatureBuilder {
         current.openBrackets -= 1
       }
     } */
-    // 2 tokens is a declaration or control block
+    /* // 2 tokens is a declaration or control block
     else if (tokens.arrayLength == 2) {
       // If first token is a type, then it is a declaration
       // NOTE: This can be done in buildNextLine in Generator.dn
@@ -166,12 +208,12 @@ component provides FeatureBuilder {
       }
       else if (tokens[0] == "while") {
          update.totalWhiles += 1
-      }
+      } */
       /* else {
         // Must be a return statement
         // NOTE: what would be appropriate here, if anything?
       } */
-    }
+    /* }
     // -- Not a declaration or control block --
     else if (tokens.arrayLength >= 3) {
       // 3 tokens is assignment
@@ -196,7 +238,7 @@ component provides FeatureBuilder {
       }
     }
     return update
-  }
+  }  */
 
   int getAbsValue(int number) {
     if (number < 0) {

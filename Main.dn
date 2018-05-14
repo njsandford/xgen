@@ -157,7 +157,12 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		*/
 
 		/* Provided feature vector for counting program */
+		FeatureBuilder featureBuilder = new FeatureBuilder()
 		FeatureVector providedFeatures = new PIFixed(26, 6, 1, 17, 1, 1, 2)
+		int maxDeviation = 0 // Change this as neccesary.
+		// pass this to FeatureBuilder
+		featureBuilder.setProvidedFeatures(providedFeatures)
+		featureBuilder.setMaxDeviation(maxDeviation)
 
 		char exampleImplementation[] = null //we might take "hints" from this, e.g. global state, which functions are self-contained ...
 		String auxFiles[]// = new String[](new String("data.StringUtil"))
@@ -170,6 +175,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 
 		// -- initialise the code generator and search for implementations --
 
+		// NOTE: pass the provided feature vector here?
 		Generator generator = new Generator(searchDirectories)
 
 		generator.setProvidedInterface(buildInterface)
@@ -183,8 +189,8 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 
 		// - grab the type of the provided interface, and enumerate its functions, to search for implementations of each one in turn
 
-		// NOTE: add the feature vector to this:
 		FunctionPrototype functionList[] = getFunctionsFrom(searchDirectories, buildInterface)
+		featureBuilder.setFunctionPrototype(functionList[])
 
 		FunctionData functionDefs[]
 
@@ -198,7 +204,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		// - now find all independent functions
 
 		// NOTE: pass feature vector here! OR do we just pass it to generator?
-		codeSearch.search(buildFolder, buildInterface, functionDefs, generator, ut)
+		codeSearch.search(buildFolder, buildInterface, functionDefs, generator, ut, featureBuilder)
 
 		//TODO: find all "linked" functions
 

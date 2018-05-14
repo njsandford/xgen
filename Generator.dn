@@ -1,7 +1,7 @@
 //NOTE: could separate the "clock hands" concept into a utility component...
 
 uses reflect.Type
-uses FeatureBuilder.FeatureVector // Is this the right way to do it?
+uses FeatureBuilder
 
 const byte XTYPE_VAR = 100
 
@@ -18,8 +18,7 @@ data Node extends Option
 	SearchScope subLines[]
 	bool declarationsComplete // Very useful for feature building: can do a check that enough/not too many variables exist to make the FV reachable.
 	bool blankLines
-	char currentLine[] // The current line for this node -- may need to be changed to be a set of possible lines?
-	int lineType // The type of line this is, e.g. declaration/assignment/if/while/return
+	Operation lineInfo // Stores information about the current line for this node
 	FeatureVector features
 	}
 
@@ -49,7 +48,7 @@ data Variable {
 	}
 
 /* NOTE: I think this represents a single line of a program? */
-data Operation
+data Operation {
 	Variable newVar // NOTE: What is this? Variable declaration?
 	char line[]
 	int lineType // The type of line this is: [0=local var call], 1=declaration, 2=assignment(NOTE: could have 2 types of assignment, e.g. a = b, and a = b + c), 3=if, 4=while, 5=return
@@ -1467,7 +1466,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 	//NOTE: this function operates by "return" purely because adding to a global array within "ps" is super slow
 	// (as it tends to expand an already-big array, rather than expanding incrementally smaller arrays as it goes)
-	Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, bool addReturn, FeatureVector desiredFeatures, int maxDeviation)
+	// ps =
+	Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, bool addReturn, FeatureBuilder featureBuilder)
 		{
 		Node programs[]
 
@@ -1487,6 +1487,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			for (int i = 0; i < options.arrayLength; i++)
 				{
 				int set = offset+i
+
 				// NOTE: Compute similarity/distance to feature vector
 				// Things we can pass to feature builder from here:
 				// 	- Current line number
@@ -1495,9 +1496,19 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				//  - Input params?? from fp
 				//  -
 				//  -
-				//  -
-				PIFixed featureVector = options[i].features // get the current feature vector for this node
-				PIFixed updatedFeatures = featureBuilder.updateFeatureVector(featureVector, )
+				//  - Maybe should first check if declarations are finished, and if so, do a reachability test?
+				// 	-
+				Node currentNode = options[i]
+				PIFixed featureVector = currentNode.features // get the current feature vector for this node
+				PIFixed updatedFeatures = featureBuilder.updateFeatureVector(currentNode) //,
+				options[i].features = updatedFeatures
+
+				bool isProgramReachable = featureBuilder.areFeaturesReachable(currentNode.features, currentNode.declarationsComplete)
+				if (!isProgramReachable) {
+					// Decide if the current program is reachable - if not, don't continue.
+					// return ???
+				}
+
 				options[i].lines = new int[](start.lines, set)
 
 				int continueLineCount = lineCount - 1
@@ -1526,28 +1537,33 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					while (moreOptions)
 						{
 						subps.found = 0
-						Node subOption[] = buildLines(subps, subps.nextNode, subGlobalFF, sc.root, returnType, sc.subLinesCount, false)
+						Node subOption[] = buildLines(subps, subps.nextNode, subGlobalFF, sc.root, returnType, sc.subLinesCount, false, featureBuilder)
 
 						if (subOption != null)
 							{
 							//append the lines immediately from subps' only option
 							Node optionN = clone options[i]
 
+							// Do a feature update here too?
+
 							optionN.lines = new int[](options[i].lines, subOption[0].lines)
 
 							//continue to populate the next line of code after the sub-scope
 							// - the use of globalFF here is really strange to work out: what it's saying is, if I'm in a sub-scope already, an we're in a fast-forward, do NOT mess with the last line of this sub-scope, because the "resume" point of a fast-forward is ALWAYS from the last line of the function (i.e. the return); nothing else is allowed to move -- because last-line-returns completely ignore globalFF, this only gets noticed if we're on the last line of a sub-scope, where we *don't* want to skip the option
-							Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, addReturn)
+							Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, addReturn, featureBuilder)
 
-							if (childOptions != null) programs = new Node[](programs, childOptions)
+							if (childOptions != null) {
+								 programs = new Node[](programs, childOptions)
 
-							if (ps.found == ps.limit)
-								return programs
+								if (ps.found == ps.limit)
+									return programs
+								}
 							}
 							else
 							{
-							moreOptions = false
+								moreOptions = false
 							}
+
 
 						fastForward = null
 						subGlobalFF = false
@@ -1556,13 +1572,15 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					else
 					{
 					//continue to populate the next line of code
-					Node childOptions[] = buildLines(ps, fastForward, globalFF, options[i], returnType, continueLineCount, addReturn)
+					Node childOptions[] = buildLines(ps, fastForward, globalFF, options[i], returnType, continueLineCount, addReturn, featureBuilder)
 
-					if (childOptions != null) programs = new Node[](programs, childOptions)
+					if (childOptions != null) {
+						programs = new Node[](programs, childOptions)
 
-					if (ps.found == ps.limit)
-						return programs
-					}
+						if (ps.found == ps.limit)
+							return programs
+						}
+				}
 
 				fastForward = null
 				}
@@ -1586,29 +1604,24 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				int set = offset+i
 
 				// NOTE: Measure final distance of feature vector here.
-				// If the features of the current node are similar enough to the desired feature vector, add it to tree.
-				int proximityToDesiredProgram = featureBuilder.distanceBetweenVectors(desiredFeatures, options[i].features)
-				if (proximityToDesiredProgram <= maxDeviation) {
+				bool programClosenessCheck = featureBuilder.isProgramSimilar(options[i].features)
+
+				if (programClosenessCheck) {
 					options[i].lines = new int[](start.lines, set)
 					selection = new Node[](selection, options[i])
 
 					ps.found ++
-				}
 
-				// MOVED ABOVE
-				/* options[i].lines = new int[](start.lines, set)
-				selection = new Node[](selection, options[i])
 
-				ps.found ++ */
-
-				//ps.nodes = new Node[](ps.nodes, options[i])
-
-				if (ps.found == ps.limit)
-					{
-					ps.nextNode = options[i]
-					break
+					if (ps.found == ps.limit)
+						{
+						ps.nextNode = options[i]
+						break
+						}
 					}
 				}
+
+				//ps.nodes = new Node[](ps.nodes, options[i])
 
 			//ps.nodes = new Node[](ps.nodes, selection)
 
@@ -1781,7 +1794,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		}
 
 	//NOTE pass feature vector here!
-	OptionSet Generator:getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom)
+	OptionSet Generator:getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
 		PermutationSet ps = new PermutationSet(lineCount, maxOptions)
 
@@ -1794,7 +1807,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 		Node root = new Node(null, ins)
 
-		Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, true)
+		// NOTE: pass feature vector here:
+		Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, true, featureBuilder)
 
 		OptionSet result = new OptionSet(options, ps.nextNode)
 

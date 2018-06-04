@@ -5,7 +5,7 @@ uses FeatureBuilder
 
 uses UnitTest
 
-component provides App requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, io.FileSystem fileSystem, os.SystemInfo sysInfo, doc.DocBuilder, Generator, composition.RecursiveLoader loader, search.CodeSearch:RandomSparseSamples codeSearch {
+component provides App requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, io.FileSystem fileSystem, os.SystemInfo sysInfo, doc.DocBuilder, Generator, composition.RecursiveLoader loader, search.CodeSearch:GlobalRandom codeSearch, FeatureBuilder featureBuilder {
 
 	char[] findPackage(String searchPaths[], char p[])
 		{
@@ -144,21 +144,20 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		{
 		char buildFolder[] = "tmp"
 
-		char unitTests[] = "input_addition.txt"
+		/* char unitTests[] = "input_addition.txt"
 		char testProgram[] = "UnitTest_Add.o"
 		char buildInterface[] = "IntFunction"
-		int lineCount = 3
+		int lineCount = 3 */
 
-		/*
+
 		char unitTests[] = "input_search_count.txt"
 		char testProgram[] = "UnitTest_SearchCount.o"
 		char buildInterface[] = "Int_IntArray_Int_Function"
-		int lineCount = 20
-		*/
+		int lineCount = 26
+
 
 		/* Provided feature vector for counting program */
-		FeatureBuilder featureBuilder = new FeatureBuilder()
-		FeatureVector providedFeatures = new PIFixed(26, 6, 1, 17, 1, 1, 2)
+		PIFixed providedFeatures = new PIFixed(lineCount, 21, 6, 0, 8, 1, 1, 0, 1, 7, 1, 1, null, 0, 0)
 		int maxDeviation = 0 // Change this as neccesary.
 		// pass this to FeatureBuilder
 		featureBuilder.setProvidedFeatures(providedFeatures)
@@ -190,7 +189,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		// - grab the type of the provided interface, and enumerate its functions, to search for implementations of each one in turn
 
 		FunctionPrototype functionList[] = getFunctionsFrom(searchDirectories, buildInterface)
-		featureBuilder.setFunctionPrototype(functionList[])
+		/* featureBuilder.setFunctionPrototype(functionList[]) */
 
 		FunctionData functionDefs[]
 
@@ -203,7 +202,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 
 		// - now find all independent functions
 
-		// NOTE: pass feature vector here! OR do we just pass it to generator?
+		// NOTE: pass feature vector here
 		codeSearch.search(buildFolder, buildInterface, functionDefs, generator, ut, featureBuilder)
 
 		//TODO: find all "linked" functions

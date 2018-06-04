@@ -1,5 +1,6 @@
 uses data.String
 uses FunctionData
+uses data.adt.Stack
 
 data FeatureVector {
   int totalLines
@@ -21,17 +22,24 @@ data PIFixed extends FeatureVector {
   int totalFunctionCalls
   int totalReturns // Can there be more than one?
   // Average length of while loop
-  int aveLoopLenth
+  int aveLoopLength
   // Average length of if statements
-  int aveControlBlockLength
+  int aveWhileLength
   int highestNestingLevel
-  // -- temporary values for getting highestNestingLevel --
+  // -- temporary values for getting highestNestingLevel and aveLoopLenth --
   Stack remainingLinesInBlock // Stack representing the lines remaining to be filled in each control block.
+  int totalLoopLength
+  int totalWhileLength
+  int minimumLinesToComplete // Value representing how many lines are needed to include the specified features
 }
 
 // Position-dependent features, fixed number of features
 data PDFixed extends FeatureVector {
 
+}
+
+data LineInfo {
+  int linesRemaining
 }
 
 interface FeatureBuilder {
@@ -46,14 +54,16 @@ interface FeatureBuilder {
 
   /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
   /* FeatureVector updateFeatureVector(FeatureVector current, String newLine) */
-  PIFixed updateFeatureVector(PIFixed currentFeatures, char newLine[], int subLinesCount) // Pass the new node, which contains the feature vector, the new line, and all information for the operation
+  PIFixed updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount) // Pass the new node, which contains the feature vector, the new line, and all information for the operation
+
+  bool rejectEarly(PIFixed currentFeatures, int linesRemaining)
 
   /* Compute the distance between two vectors. */
   int distanceBetweenVectors(PIFixed lhs, PIFixed rhs)
 
   bool isProgramSimilar(PIFixed features)
 
-  bool areFeaturesReachable(PIFixed provided, PIFixed current, bool declarationsComplete)
+  bool areFeaturesReachable(PIFixed current, bool declarationsComplete)
 
 
 

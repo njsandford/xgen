@@ -12,10 +12,9 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 	int batchSize = 20000
 
 	// NOTE add feature vector here!
-	FunctionSource[] primeFunctions(FunctionData functionList[], Generator generator)
+	FunctionSource[] primeFunctions(FunctionData functionList[], Generator generator, FeatureBuilder featureBuilder)
 		{
 		//fill in any version of all functions
-
 		FunctionSource foundFunctions[] = new FunctionSource[functionList.arrayLength]
 
 		for (int i = 0; i < functionList.arrayLength; i++)
@@ -23,7 +22,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 			//NOTE: this is a surprisingly slow way to get an option, because the first option tends to have the most permutations (most variables declared)
 			// - we could either just assume that "all 0's" works (but this requires the first param to be of the function's return type), or go random instead?
 
-			OptionSet ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, 1, null)
+			OptionSet ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, 1, null, featureBuilder)
 
 			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0]))
 			}
@@ -108,7 +107,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 		{
 		//first get any solutions for all functions of the interface, so that the overall component will compile correctly
 
-		FunctionSource foundFunctions[] = primeFunctions(functionList, generator)
+		FunctionSource foundFunctions[] = primeFunctions(functionList, generator, featureBuilder)
 
 		dataLog = new Logger("results_data.txt")
 		statusLog = new Logger("results_log.txt")

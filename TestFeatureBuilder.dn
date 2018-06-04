@@ -1,0 +1,45 @@
+uses FeatureBuilder
+uses Generator
+uses data.StringUtil
+uses data.IntUtil
+
+component provides App requires Generator, FeatureBuilder, io.Output out, data.StringUtil, data.IntUtil {
+
+  PIFixed providedFeatures = new PIFixed(4, 4, 2, 0, 0, 1, 2, 0, 1, 2, 3, 2, null, 0, 0)
+
+  void printFeatureVector(PIFixed vf) {
+    IntUtil intUtil = new IntUtil()
+    out.println("Features:")
+    out.println("Total Lines: $(intUtil.intToString(vf.totalLines))")
+    out.println("Total Variables: $(intUtil.intToString(vf.totalVars))")
+    out.println("Total If Statements: $(intUtil.intToString(vf.totalIfs))")
+    out.println("Total While Loops: $(intUtil.intToString(vf.totalWhiles))")
+    out.println("Average If Statement Length: $(intUtil.intToString(vf.aveLoopLength))")
+    out.println("Average While Loop Length: $(intUtil.intToString(vf.aveWhileLength))")
+    out.println("Highest Control Block Nesting Level: $(intUtil.intToString(vf.highestNestingLevel))")
+    out.println("Total Assignments: $(intUtil.intToString(vf.totalAssignments))")
+    out.println("Total Non Blank Lines: $(intUtil.intToString(vf.nonBlankLines))")
+  }
+
+  int App:main(AppParam params[]) {
+
+    char nextLine[]
+    char whileLoop[] = "while (x)"
+    char ifStatement[] = "if (x)"
+    char declaration[] = "int x"
+    char assignment[] = "x = a"
+    char returnStatement[] = "return x"
+
+    nextLine = whileLoop
+    int subLinesCount = 3
+    int lineType = 4
+
+    FeatureBuilder featureBuilder = new FeatureBuilder()
+    PIFixed currentFeatures = featureBuilder.getNewFeatureVector()
+    PIFixed updatedFeatures = featureBuilder.updateFeatureVector(currentFeatures, lineType, nextLine, subLinesCount)
+    printFeatureVector(updatedFeatures)
+
+    return 0
+  }
+
+}

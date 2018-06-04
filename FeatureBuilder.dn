@@ -5,7 +5,7 @@ uses data.adt.Stack
 uses FunctionData
 uses Generator
 
-component provides FeatureBuilder requires data.adt.Stack, data.StringUtil {
+component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.Output output, data.IntUtil intUtil {
 
   /* FeatureBuilder:FeatureBuilder()
     {
@@ -18,7 +18,12 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil {
 
   FunctionData functionData
 
-  FeatureVector providedFeatures
+  PIFixed providedFeatures
+
+  int acceptedPrograms
+  int rejectedPrograms
+  int acceptedBranches
+  int rejectedBranches
 
   PIFixed FeatureBuilder:getNewFeatureVector() {
     PIFixed features = new PIFixed()
@@ -31,10 +36,12 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil {
     features.totalIfs = 0
     features.totalFunctionCalls = 0
     features.totalReturns = 0
-    features.aveLoopLenth = 0
-    features.aveControlBlockLength = 0
+    features.aveLoopLength = 0
+    features.aveWhileLength = 0
     features.highestNestingLevel = 0
     features.remainingLinesInBlock = new Stack()
+    features.totalLoopLength = 0
+    features.totalWhileLength = 0
     return features
   }
 
@@ -53,63 +60,119 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil {
   // get a new PIFixed feature vector for the current feature vector (of a node) plus the new line.
   // May be easier/make more sense to just pass a Node and get the feature vector from there.
   /* PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) { */
-  PIFixed FeatureBuilder:updateFeatureVector(PIFixed currentFeatures, char newLine[], int subLinesCount) { //}, String inputVarType) {
+  PIFixed FeatureBuilder:updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount) { //}, String inputVarType) {
     // Node node = clone newNode
     //FeatureVector current = node.features
+    PIFixed features
+    if (currentFeatures == null) features = getNewFeatureVector()
+    else features = clone currentFeatures
+
     if (newLine == null) {
       // Or return 0 or -1? Or throw exception?
-      return null
+      /* return null */
     }
-    if (currentFeatures == null) {
-      currentFeatures = getNewFeatureVector()
-    }
+    /* if (features == null) {
+      features = getNewFeatureVector()
+    } */
 
-    currentFeatures.totalLines += 1
-    if (currentFeatures.totalLines > 0) {
+    features.totalLines += 1
+    if (features.totalLines > 0) {
       // Non blank line
-      currentFeatures = doUpdate(currentFeatures, newLine, subLinesCount)
+      features = doUpdate(features, lineType, newLine, subLinesCount)
     }
 
-    return currentFeatures
+    return features
+  }
+
+  int getMinimumLinesNeededToCompleteFeatures(PIFixed current) { //}, int programLength) {
+    //int currentLinesUsed = current.totalLines
+    //int linesRemaining = programLength - currentLinesUsed
+    int minRequired = 0
+    if (current.totalVars < providedFeatures.totalVars) {
+      minRequired += providedFeatures.totalVars - current.totalVars
+    }
+    if (current.totalAssignments < providedFeatures.totalAssignments) {
+      minRequired += providedFeatures.totalAssignments - current.totalAssignments
+    }
+    if (current.totalWhiles < providedFeatures.totalWhiles) {
+      minRequired += (providedFeatures.totalWhiles - current.totalWhiles) * 4 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
+    }
+    if (current.totalIfs < providedFeatures.totalIfs) {
+      minRequired += (providedFeatures.totalIfs - current.totalIfs) * 4 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
+    }
+    return minRequired
+  }
+
+  bool FeatureBuilder:rejectEarly(PIFixed currentFeatures, int linesRemaining) {
+    // NOTE: complete!
+    int minLinesToComplete = getMinimumLinesNeededToCompleteFeatures(currentFeatures)
+    if (minLinesToComplete > linesRemaining) {
+      /* output.println("minLinesToComplete: $(intUtil.intToString(minLinesToComplete)), linesRemaining: $(intUtil.intToString(linesRemaining))") */
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
+      return true // cannot complete all features in the remaining lines, so reject program.
+    }
+    // Check if too many variables have been declared
+    else if (currentFeatures.totalVars > providedFeatures.totalVars) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
+      return true
+    }
+    acceptedBranches += 1
+    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
+    else return false
   }
 
   // Compute the total distance between two vectors.
   int FeatureBuilder:distanceBetweenVectors(PIFixed lhs, PIFixed rhs) {
     int totalDistance
-    totalDistance += getAbsValue(lhs.totalLines - rhs.totalLines)
-    totalDistance += getAbsValue(lhs.nonBlankLines - rhs.nonBlankLines)
-    totalDistance += getAbsValue(lhs.totalVars - rhs.totalVars)
-    totalDistance += getAbsValue(lhs.nonInputVars - rhs.nonInputVars)
-    totalDistance += getAbsValue(lhs.totalAssignments - rhs.totalAssignments)
-    totalDistance += getAbsValue(lhs.totalWhiles - rhs.totalWhiles)
-    totalDistance += getAbsValue(lhs.totalIfs - rhs.totalIfs)
-    totalDistance += getAbsValue(lhs.totalFunctionCalls - rhs.totalFunctionCalls)
-    /* totalDistance += getAbsValue(lhs.aveLoopLenth - rhs.aveLoopLenth)
-    totalDistance += getAbsValue(lhs.aveControlBlockLength - rhs.aveControlBlockLength) */
-    totalDistance += getAbsValue(lhs.highestNestingLevel - rhs.highestNestingLevel)
+    totalDistance += differenceBetweenInts(lhs.totalLines, rhs.totalLines)
+    totalDistance += differenceBetweenInts(lhs.nonBlankLines, rhs.nonBlankLines)
+    totalDistance += differenceBetweenInts(lhs.totalVars, rhs.totalVars)
+    totalDistance += differenceBetweenInts(lhs.nonInputVars, rhs.nonInputVars)
+    totalDistance += differenceBetweenInts(lhs.totalAssignments, rhs.totalAssignments)
+    totalDistance += differenceBetweenInts(lhs.totalWhiles, rhs.totalWhiles)
+    totalDistance += differenceBetweenInts(lhs.totalIfs, rhs.totalIfs)
+    /* totalDistance += getAbsValue(lhs.totalFunctionCalls - rhs.totalFunctionCalls) */
+    totalDistance += differenceBetweenInts(lhs.aveLoopLength, rhs.aveLoopLength)
+    totalDistance += differenceBetweenInts(lhs.aveWhileLength, rhs.aveWhileLength)
+    totalDistance += differenceBetweenInts(lhs.highestNestingLevel, rhs.highestNestingLevel)
     return totalDistance
   }
 
   // Decide if the provided features are reachable from the current FV.
   // NOTE could update this to include the order of assignments made, eg. ints before bools.
-  bool FeatureBuilder:areFeaturesReachable(PIFixed provided, PIFixed current, bool declarationsComplete) {
+  bool FeatureBuilder:areFeaturesReachable(PIFixed current, bool declarationsComplete) {
+    if (providedFeatures == null) output.println("providedFeatures is null in areFeaturesReachable in FeatureBuilder")
+    if (current == null) output.println("current FV is null in areFeaturesReachable in FeatureBuilder")
     if (declarationsComplete) {
-      if (provided.totalAssignments > current.totalAssignments) {
+      if (providedFeatures.totalAssignments > current.totalAssignments) {
         // Not enough assignments made, so not reachable.
+        rejectedBranches += 1
+        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
         return false
       }
+      acceptedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
       else return true
     }
+    acceptedBranches += 1
+    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
     return true
   }
 
   bool FeatureBuilder:isProgramSimilar(PIFixed features) {
+    if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
     // If the features of the current node are similar enough to the provided feature vector, add it to tree.
     int proximityToProvidedProgram = distanceBetweenVectors(providedFeatures, features)
     // move this to FeatureBuilder
     if (proximityToProvidedProgram <= maxDeviation) {
+      acceptedPrograms += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
       return true
     }
+    rejectedPrograms += 1
+    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
     else return false
   }
 
@@ -121,20 +184,24 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil {
 
   // NOTE: If function overloading is possible, have separate functions for each type of FeatureVector (when more than PIFixed is available!)
   /* FeatureVector doUpdate(Node currentNode) { */
-  PIFixed doUpdate(PIFixed currentFeatures, char newLine[], int subLinesCount) {
+  PIFixed doUpdate(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount) {
     //Node node = clone currentNode
     PIFixed update = currentFeatures //node.features
+    update.nonBlankLines += 1
     //Operation lineInfo = node.lineInfo
-    String tokens[] = getLineComponents()
+    String tokens[] = getLineComponents(newLine)
     // Check if we are currently within a subscope:
     if (update.remainingLinesInBlock.getLength() != 0) {
-      if (update.remainingLinesInBlock.peek() == 0) {
+      LineInfo lineInfo = update.remainingLinesInBlock.peek()
+      if (lineInfo.linesRemaining == 0) {
         update.remainingLinesInBlock.remove(update.remainingLinesInBlock.peek())
       }
       if (update.remainingLinesInBlock.getLength() != 0) {
-        int updatedCount = update.remainingLinesInBlock.peek() - 1 // make a copy of top value and update it
-        update.remainingLinesInBlock.remove(update.remainingLinesInBlock.peek())
-        update.remainingLinesInBlock.add(updatedCount) // replace with updated value
+        //int updatedCount = update.remainingLinesInBlock.peek().linesRemaining - 1 // make a copy of top value and update it
+        lineInfo = update.remainingLinesInBlock.peek()
+        lineInfo.linesRemaining -= 1
+        update.remainingLinesInBlock.update(update.remainingLinesInBlock.peek(), lineInfo)
+        /* update.remainingLinesInBlock.add(updatedCount) // replace with updated value */
       }
     }
     if (lineType == 0) {
@@ -154,19 +221,29 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil {
     else if (lineType == 3) {
       // 3 = if statement
       update.totalIfs += 1
-      update.remainingLinesInBlock.add(subLinesCount)
+      // update average if statement length
+      update.totalLoopLength += subLinesCount
+      update.aveLoopLength = update.totalLoopLength / update.totalIfs
+      // Update control block nesting info
+      LineInfo nextCount = new LineInfo(subLinesCount)
+      update.remainingLinesInBlock.add(nextCount)
       // Check if current nesting level is greater than previous maximum, if so, update maximum
       if (update.remainingLinesInBlock.getLength() > update.highestNestingLevel) {
-        update.highestNestingLevel = update.getLength()
+        update.highestNestingLevel = update.remainingLinesInBlock.getLength()
       }
     }
     else if (lineType == 4) {
       // 4 = while loop
       update.totalWhiles += 1
-      update.remainingLinesInBlock.add(subLinesCount)
+      // Update average while loop length
+      update.totalWhileLength += subLinesCount
+      update.aveWhileLength = update.totalWhileLength / update.totalWhiles
+      // Update control block nesting info
+      LineInfo nextCount = new LineInfo(subLinesCount)
+      update.remainingLinesInBlock.add(nextCount)
       // Check if current nesting level is greater than previous maximum, if so, update maximum
       if (update.remainingLinesInBlock.getLength() > update.highestNestingLevel) {
-        update.highestNestingLevel = update.getLength()
+        update.highestNestingLevel = update.remainingLinesInBlock.getLength()
       }
 
     }
@@ -240,11 +317,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil {
     return update
   }  */
 
-  int getAbsValue(int number) {
-    if (number < 0) {
-      number = 0 - number
-    }
-    return number
+  int differenceBetweenInts(int lhs, int rhs) {
+    if (lhs == rhs) return 0
+    else if (lhs < rhs) return rhs - lhs
+    else return lhs - rhs
   }
 
 }

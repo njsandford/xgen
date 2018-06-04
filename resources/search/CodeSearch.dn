@@ -6,5 +6,5 @@ uses FeatureBuilder
 interface CodeSearch {
 
 	void search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut, FeatureBuilder featureBuilder)
-	
+
 	}

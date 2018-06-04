@@ -4,95 +4,95 @@
 
 const int EXS_THREAD_COUNT = 8
 
-component provides CodeSearch:RandomSparseSamples requires io.Output out, data.IntUtil iu, TestSystem testSystem, Logger, util.RandomInt randomInt, time.Calendar calendar {
-	
+component provides CodeSearch:RandomSparseSamples requires io.Output out, data.IntUtil iu, TestSystem testSystem, Logger, util.RandomInt randomInt, time.Calendar calendar, FeatureBuilder {
+
 	Logger dataLog
 	Logger statusLog
-	
+
 	//how many point-samples we take in total
 	int sampleCount = 1000000
-	
+
 	int batchSize = 100 //how many point-samples each thread does at a time
-	
-	FunctionSource[] primeFunctions(FunctionData functionList[], Generator generator)
+
+	FunctionSource[] primeFunctions(FunctionData functionList[], Generator generator, FeatureBuilder featureBuilder)
 		{
 		//fill in any version of all functions
-		
+
 		FunctionSource foundFunctions[] = new FunctionSource[functionList.arrayLength]
-		
+
 		for (int i = 0; i < functionList.arrayLength; i++)
 			{
 			//NOTE: this is a surprisingly slow way to get an option, because the first option tends to have the most permutations (most variables declared)
 			// - we could either just assume that "all 0's" works (but this requires the first param to be of the function's return type), or go random instead?
-			
+
 			//OptionSet ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, 1, null)
 			//foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0]))
-			
+
 			Option q = generator.getRandomOption(functionList[i].prototype, functionList[i].lineCount, randomInt)
 			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, q))
 			}
-		
+
 		return foundFunctions
 		}
-	
+
 	char[] indexToString(int index, int lines[])
 		{
 		char encoded[] = iu.intToString(index)
 		encoded = new char[](encoded, "|")
 		bool needDot = false
-		
+
 		for (int i = 0; i < lines.arrayLength; i++)
 			{
 			if (needDot) encoded = new char[](encoded, ".")
-			
+
 			encoded = new char[](encoded, iu.intToString(lines[i]))
-			
+
 			needDot = true
 			}
-		
+
 		return encoded
 		}
-	
+
 	char[] optionToString(int lines[])
 		{
 		char encoded[]
-		
+
 		bool needDot = false
-		
+
 		for (int i = 0; i < lines.arrayLength; i++)
 			{
 			if (needDot) encoded = new char[](encoded, ".")
-			
+
 			encoded = new char[](encoded, iu.intToString(lines[i]))
-			
+
 			needDot = true
 			}
-		
+
 		return encoded
 		}
-	
+
 	void getSamples(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, int count, Generator generator, RandomInt rgen, char buildFolder[], UnitTest ut, char tmpName[])
 		{
 		String requiresList[] = generator.getRequiresList()
-		
+
 		String solutions[]
-		
+
 		ComponentSource src = new ComponentSource()
 		src.requiredInterfaces = generator.getRequiresList()
 		src.interfaceName = buildInterface
 		src.functions = functions
-		
+
 		for (int i = 0; i < count; i++)
 			{
 			Option o = generator.getRandomOption(spec.prototype, spec.lineCount, rgen)
-			
+
 			String function[] = generator.decodeOption(spec.prototype, o)
 			functions[functionIndex] = new FunctionSource(function)
-			
+
 			String compsrc[] = testSystem.makeComponentSource(src)
-			
+
 			bool success = testSystem.testFunction(compsrc, buildFolder, tmpName, ut, buildInterface, spec.name)
-			
+
 			if (success)
 				{
 				char encoded[] = indexToString(i, o.lines)
@@ -100,49 +100,49 @@ component provides CodeSearch:RandomSparseSamples requires io.Output out, data.I
 				}
 			}
 		}
-	
-	void CodeSearch:search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut)
+
+	void CodeSearch:search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut, FeatureBuilder featureBuilder)
 		{
 		//first get any solutions for all functions of the interface, so that the overall component will compile correctly
-		
+
 		FunctionSource foundFunctions[] = primeFunctions(functionList, generator)
-		
+
 		dataLog = new Logger("results_data.txt")
 		statusLog = new Logger("results_log.txt")
-		
+
 		//ask the generator for a batch of random samples (some fraction of sampleCount, maybe threadCount?)
 		// - pass this sample start-point off to a worker for processing
 		// - at the end of each sector they'll write their entire batch results to the log as a separated-out segment, so we could index-locate the segment later
 		// - loop until we're done with sampleCount
-		
+
 		RandomInt rgen = new RandomInt()
 		rgen.setSeed(calendar.getTime().millisecond)
-		
+
 		for (int i = 0; i < functionList.arrayLength; i++)
 			{
 			FunctionData nfc = functionList[i]
-		
+
 			int samplesTaken = 0
-			
+
 			Thread pool[] = new Thread[EXS_THREAD_COUNT]
-			
+
 			while (samplesTaken < sampleCount)
 				{
 				for (int j = 0; j < EXS_THREAD_COUNT && samplesTaken < sampleCount; j++)
 					{
 					pool[j] = asynch::getSamples(buildInterface, clone foundFunctions, i, nfc, batchSize, generator, rgen, buildFolder, ut, "test$(iu.intToString(j))")
-					
+
 					samplesTaken += batchSize
 					}
-				
+
 				for (int j = 0; j < EXS_THREAD_COUNT; j++)
 					{
 					pool[j].join()
 					}
-				
+
 				statusLog.write("$(iu.intToString(samplesTaken)) samples complete")
 				}
 			}
 		}
-	
+
 	}

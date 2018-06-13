@@ -1,0 +1,17 @@
+component provides Int_IntArray_Int_Function {
+
+	int Int_IntArray_Int_Function:function(int a[], int b)
+		{
+		int count
+		bool condition
+
+		condition = b == b
+		while (condition)
+			{
+				count = b + b
+			}
+
+		return count
+		}
+
+	}

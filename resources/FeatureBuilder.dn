@@ -8,8 +8,14 @@ data FeatureVector {
 
 // Position-independent features, fixed number of features
 data PIFixed extends FeatureVector {
-  int nonBlankLines
+  /* int nonBlankLines */
+  int blankLines
   int totalVars
+  int totalInts
+  int totalDecs
+  int totalChars
+  int totalBools
+  int totalDatas
   // Number of variables used not of input Variable type
   int nonInputVars
   // NOTE: May need to make this a 'total' rather than average for updating each line.
@@ -33,6 +39,46 @@ data PIFixed extends FeatureVector {
   int minimumLinesToComplete // Value representing how many lines are needed to include the specified features
 }
 
+data Variables {
+  int totalInts
+  int totalDecs
+  int totalChars
+  int totalBools
+  int totalDatas
+}
+
+data Assignments {
+  int totalVarToLit
+  int totalVarToVar
+  int totalVarToOp
+  int totalIndToLit
+  int totalIndToVar
+  int totalIndToOp
+}
+
+data Operations {
+  int totalAdd
+  int totalSub
+  int totalMul
+  int totalDiv
+  int totalMod
+  int totalBOr
+  int totalBAnd
+  int totalBXor
+  int totalBFlip
+  int totalLShift
+  int totalRShift
+  int totalSEqu
+  int totalSNotEqu
+  int totalGreater
+  int totalLess
+  int totalGreaterEqu
+  int totalLessEqu
+  int totalNot
+  int totalEqu
+  int totalNotEqu
+}
+
 // Position-dependent features, fixed number of features
 data PDFixed extends FeatureVector {
 
@@ -54,17 +100,16 @@ interface FeatureBuilder {
 
   /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
   /* FeatureVector updateFeatureVector(FeatureVector current, String newLine) */
-  PIFixed updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount) // Pass the new node, which contains the feature vector, the new line, and all information for the operation
+  PIFixed updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType) // Pass the new node, which contains the feature vector, the new line, and all information for the operation
 
   bool rejectEarly(PIFixed currentFeatures, int linesRemaining)
 
-  /* Compute the distance between two vectors. */
-  int distanceBetweenVectors(PIFixed lhs, PIFixed rhs)
+  bool programHasMinimumFeatures(PIFixed features, int linesRemaining)
 
-  bool isProgramSimilar(PIFixed features)
+  bool isProgramSimilar(PIFixed features, int linesRemaining)
 
-  bool areFeaturesReachable(PIFixed current, bool declarationsComplete)
+  bool areFeaturesReachable(PIFixed current, bool declarationsComplete, int linesRemaining)
 
-
+  bool hasMinLinesToCompleteFeatures(PIFixed current, int linesRemaining)
 
 }

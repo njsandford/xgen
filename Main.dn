@@ -147,17 +147,26 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		/* char unitTests[] = "input_addition.txt"
 		char testProgram[] = "UnitTest_Add.o"
 		char buildInterface[] = "IntFunction"
-		int lineCount = 3 */
+		int lineCount = 1 */
 
 
 		char unitTests[] = "input_search_count.txt"
 		char testProgram[] = "UnitTest_SearchCount.o"
 		char buildInterface[] = "Int_IntArray_Int_Function"
-		int lineCount = 26
+		int lineCount = 3//16 //17 //7
 
+		Variables vars = new Variables(/*totalInts*/0, /*totalDecs*/0, /*totalChars*/0, /*totalBools*/0, /*totalDatas*/0)
+		Assignments asmts = new Assignments(/*totalVarToLit*/0, /*totalVarToVar*/0, /*totalVarToOp*/0, /*totalIndToLit*/0, /*totalIndToVar*/0, /*totalIndToOp*/0)
+		Operations ops = new Operations(/*totalAdd*/0, /*totalSub*/0, /*totalMul*/0, /*totalDiv*/0, /*totalMod*/0, /*totalBOr*/0, /*totalBAnd*/0, /*totalBXor*/0, /*totalBFlip*/0, /*totalLShift*/0,
+			/*totalRShift*/0, /*totalSEqu*/0, /*totalSNotEqu*/0, /*totalGreater*/0, /*totalLess*/0, /*totalGreaterEqu*/0, /*totalLessEqu*/0, /*totalNot*/0, /*totalEqu*/0, /*totalNotEqu*/0)
 
 		/* Provided feature vector for counting program */
-		PIFixed providedFeatures = new PIFixed(lineCount, 21, 6, 0, 8, 1, 1, 0, 1, 7, 1, 1, null, 0, 0)
+		/* PIFixed providedFeatures = new PIFixed(lineCount, 21, 6, 0, 8, 1, 1, 0, 1, 7, 1, 1, null, 0, 0, 0) */
+		/* PIFixed providedFeatures = new PIFixed(lineCount, lineCount, 6, 0, 8, 1, 1, 0, 0, 0, 0, 1, null, 0, 0, 0) */
+//		PIFixed providedFeatures = new PIFixed(/*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/0, /*nonInputVars*/0, /*totalAssignments*/1, /*totalWhiles*/0, /*totalIfs*/0, /*totalFunctionCalls*/0, /*totalReturns*/0, /*aveLoopLength*/0, /*aveWhileLength*/0, /*highestNestingLevel*/0, /*remainingLinesInBlock*/null, /*totalLoopLength*/0, /*totalWhileLength*/0, /*minimumLinesToComplete*/0)
+		PIFixed providedFeatures = new PIFixed(/*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/3, /*totalInts*/0, /*totalDecs*/0, /*totalChars*/0, /*totalBools*/0, /*totalDatas*/0, /*nonInputVars*/0, /*totalAssignments*/0, /*totalWhiles*/0, /*totalIfs*/0, /*totalFunctionCalls*/0, /*totalReturns*/0, /*aveLoopLength*/0,
+			/*aveWhileLength*/0, /*highestNestingLevel*/0, /*remainingLinesInBlock*/null, /*totalLoopLength*/0, /*totalWhileLength*/0, /*minimumLinesToComplete*/0)
+
 		int maxDeviation = 0 // Change this as neccesary.
 		// pass this to FeatureBuilder
 		featureBuilder.setProvidedFeatures(providedFeatures)

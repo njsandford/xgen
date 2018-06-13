@@ -28,7 +28,8 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   PIFixed FeatureBuilder:getNewFeatureVector() {
     PIFixed features = new PIFixed()
     features.totalLines = 0 // This might be better as nonBlankLines, and have a separate value for program length?
-    features.nonBlankLines = 0
+    /* features.nonBlankLines = 0 */
+    features.blankLines = 0
     features.totalVars = 0
     features.nonInputVars = 0
     features.totalAssignments = 0
@@ -60,74 +61,118 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   // get a new PIFixed feature vector for the current feature vector (of a node) plus the new line.
   // May be easier/make more sense to just pass a Node and get the feature vector from there.
   /* PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) { */
-  PIFixed FeatureBuilder:updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount) { //}, String inputVarType) {
+  PIFixed FeatureBuilder:updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType) { //}, String inputVarType) {
     // Node node = clone newNode
     //FeatureVector current = node.features
     PIFixed features
     if (currentFeatures == null) features = getNewFeatureVector()
     else features = clone currentFeatures
 
+    features.totalLines += 1
+
+    // blank line:
     if (newLine == null) {
+      features.blankLines += 1
       // Or return 0 or -1? Or throw exception?
       /* return null */
     }
-    /* if (features == null) {
-      features = getNewFeatureVector()
-    } */
-
-    features.totalLines += 1
-    if (features.totalLines > 0) {
+    else { //(features.totalLines > 0) {
       // Non blank line
-      features = doUpdate(features, lineType, newLine, subLinesCount)
+      features = doUpdate(features, lineType, newLine, subLinesCount, decType)
     }
 
     return features
   }
 
-  int getMinimumLinesNeededToCompleteFeatures(PIFixed current) { //}, int programLength) {
+  bool FeatureBuilder:hasMinLinesToCompleteFeatures(PIFixed current, int linesRemaining) { //}, int programLength) {
     //int currentLinesUsed = current.totalLines
     //int linesRemaining = programLength - currentLinesUsed
     int minRequired = 0
     if (current.totalVars < providedFeatures.totalVars) {
-      minRequired += providedFeatures.totalVars - current.totalVars
+      minRequired += (providedFeatures.totalVars - current.totalVars)
     }
     if (current.totalAssignments < providedFeatures.totalAssignments) {
-      minRequired += providedFeatures.totalAssignments - current.totalAssignments
+      minRequired += (providedFeatures.totalAssignments - current.totalAssignments)
     }
     if (current.totalWhiles < providedFeatures.totalWhiles) {
-      minRequired += (providedFeatures.totalWhiles - current.totalWhiles) * 4 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
+      minRequired += (providedFeatures.totalWhiles - current.totalWhiles) * 2 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
     }
     if (current.totalIfs < providedFeatures.totalIfs) {
-      minRequired += (providedFeatures.totalIfs - current.totalIfs) * 4 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
+      minRequired += (providedFeatures.totalIfs - current.totalIfs) * 2 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
     }
-    return minRequired
+    return minRequired <= linesRemaining
   }
 
   bool FeatureBuilder:rejectEarly(PIFixed currentFeatures, int linesRemaining) {
     // NOTE: complete!
-    int minLinesToComplete = getMinimumLinesNeededToCompleteFeatures(currentFeatures)
-    if (minLinesToComplete > linesRemaining) {
-      /* output.println("minLinesToComplete: $(intUtil.intToString(minLinesToComplete)), linesRemaining: $(intUtil.intToString(linesRemaining))") */
+    bool minLinesToComplete = hasMinLinesToCompleteFeatures(currentFeatures, linesRemaining)
+    if (!minLinesToComplete) {
+      //output.println("minLinesToComplete: $(intUtil.intToString(minLinesToComplete)), linesRemaining: $(intUtil.intToString(linesRemaining))")
       rejectedBranches += 1
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true // cannot complete all features in the remaining lines, so reject program.
     }
     // Check if too many variables have been declared
-    else if (currentFeatures.totalVars > providedFeatures.totalVars) {
+    if (currentFeatures.totalVars > providedFeatures.totalVars) {
       rejectedBranches += 1
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.totalInts > providedFeatures.totalInts) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.totalDecs > providedFeatures.totalDecs) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.totalBools > providedFeatures.totalBools) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.totalChars > providedFeatures.totalChars) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.totalDatas > providedFeatures.totalDatas) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.totalWhiles > providedFeatures.totalWhiles) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.totalIfs > providedFeatures.totalIfs) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.totalAssignments > providedFeatures.totalAssignments) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    if (currentFeatures.highestNestingLevel > providedFeatures.highestNestingLevel) {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
     acceptedBranches += 1
-    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
-    else return false
+    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+    return false
   }
 
   // Compute the total distance between two vectors.
-  int FeatureBuilder:distanceBetweenVectors(PIFixed lhs, PIFixed rhs) {
+  int distanceBetweenVectors(PIFixed lhs, PIFixed rhs) {
     int totalDistance
     totalDistance += differenceBetweenInts(lhs.totalLines, rhs.totalLines)
-    totalDistance += differenceBetweenInts(lhs.nonBlankLines, rhs.nonBlankLines)
+    totalDistance += differenceBetweenInts(lhs.blankLines, rhs.blankLines)//lhs.nonBlankLines, rhs.nonBlankLines)
     totalDistance += differenceBetweenInts(lhs.totalVars, rhs.totalVars)
     totalDistance += differenceBetweenInts(lhs.nonInputVars, rhs.nonInputVars)
     totalDistance += differenceBetweenInts(lhs.totalAssignments, rhs.totalAssignments)
@@ -142,38 +187,103 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
 
   // Decide if the provided features are reachable from the current FV.
   // NOTE could update this to include the order of assignments made, eg. ints before bools.
-  bool FeatureBuilder:areFeaturesReachable(PIFixed current, bool declarationsComplete) {
+  bool FeatureBuilder:areFeaturesReachable(PIFixed current, bool declarationsComplete, int linesRemaining) {
     if (providedFeatures == null) output.println("providedFeatures is null in areFeaturesReachable in FeatureBuilder")
     if (current == null) output.println("current FV is null in areFeaturesReachable in FeatureBuilder")
-    if (declarationsComplete) {
-      if (providedFeatures.totalAssignments > current.totalAssignments) {
+    if (declarationsComplete || linesRemaining == 0) {
+      /* if (providedFeatures.totalAssignments > current.totalAssignments) { */
+      if (providedFeatures.totalVars > current.totalVars) {
         // Not enough assignments made, so not reachable.
         rejectedBranches += 1
-        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
+        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        return false
+      }
+      if (providedFeatures.totalInts > current.totalInts) {
+        // Not enough assignments made, so not reachable.
+        rejectedBranches += 1
+        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        return false
+      }
+      if (providedFeatures.totalDecs > current.totalDecs) {
+        // Not enough assignments made, so not reachable.
+        rejectedBranches += 1
+        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        return false
+      }
+      if (providedFeatures.totalBools > current.totalBools) {
+        // Not enough assignments made, so not reachable.
+        rejectedBranches += 1
+        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        return false
+      }
+      if (providedFeatures.totalChars > current.totalChars) {
+        // Not enough assignments made, so not reachable.
+        rejectedBranches += 1
+        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        return false
+      }
+      if (providedFeatures.totalDatas > current.totalDatas) {
+        // Not enough assignments made, so not reachable.
+        rejectedBranches += 1
+        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
         return false
       }
       acceptedBranches += 1
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
-      else return true
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
     }
     acceptedBranches += 1
-    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
+    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
     return true
   }
 
-  bool FeatureBuilder:isProgramSimilar(PIFixed features) {
+  bool FeatureBuilder:isProgramSimilar(PIFixed features, int linesRemaining) {
     if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
     // If the features of the current node are similar enough to the provided feature vector, add it to tree.
     int proximityToProvidedProgram = distanceBetweenVectors(providedFeatures, features)
     // move this to FeatureBuilder
     if (proximityToProvidedProgram <= maxDeviation) {
       acceptedPrograms += 1
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return true
+    }
+    else {
+      rejectedPrograms += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      return false
+    }
+  }
+
+  bool FeatureBuilder:programHasMinimumFeatures(PIFixed currentFeatures, int linesRemaining) {
+    if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
+    // If the features of the current node are similar enough to the provided feature vector, add it to tree.
+    bool minFeatures = true
+    while (minFeatures == true) { // Save unneccasary computation if one of the features is not
+      /* minFeatures = minFeatures && (providedFeatures.totalLines <= currentFeatures.totalLines) */
+      /* minFeatures = minFeatures && (providedFeatures.nonBlankLines <= currentFeatures.nonBlankLines) */
+      minFeatures = minFeatures && (providedFeatures.blankLines <= currentFeatures.blankLines)
+      minFeatures = minFeatures && (providedFeatures.totalVars <= currentFeatures.totalVars)
+      minFeatures = minFeatures && (providedFeatures.totalInts <= currentFeatures.totalInts)
+      minFeatures = minFeatures && (providedFeatures.totalDecs <= currentFeatures.totalDecs)
+      minFeatures = minFeatures && (providedFeatures.totalBools <= currentFeatures.totalBools)
+      minFeatures = minFeatures && (providedFeatures.totalChars <= currentFeatures.totalChars)
+      minFeatures = minFeatures && (providedFeatures.totalDatas <= currentFeatures.totalDatas)
+      /* minFeatures = minFeatures && (providedFeatures.nonInputVars <= currentFeatures.nonInputVars) */
+      minFeatures = minFeatures && (providedFeatures.totalAssignments <= currentFeatures.totalAssignments)
+      minFeatures = minFeatures && (providedFeatures.totalWhiles <= currentFeatures.totalWhiles)
+      minFeatures = minFeatures && (providedFeatures.totalIfs <= currentFeatures.totalIfs)
+      /* totalDistance = getAbsValue(minFeatures && (providedFeatures.totalFunctionCalls - currentFeatures.totalFunctionCalls) */
+      // These features are probably not very useful...
+      /* minFeatures = minFeatures && (providedFeatures.aveLoopLength <= currentFeatures.aveLoopLength)
+      minFeatures = minFeatures && (providedFeatures.aveWhileLength <= currentFeatures.aveWhileLength) */
+      minFeatures = minFeatures && (providedFeatures.highestNestingLevel <= currentFeatures.highestNestingLevel)
+      acceptedPrograms += 1
+      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
     rejectedPrograms += 1
-    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms))")
-    else return false
+    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+    return false
   }
 
   String[] getLineComponents(char line[]) {
@@ -184,10 +294,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
 
   // NOTE: If function overloading is possible, have separate functions for each type of FeatureVector (when more than PIFixed is available!)
   /* FeatureVector doUpdate(Node currentNode) { */
-  PIFixed doUpdate(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount) {
+  PIFixed doUpdate(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType) {
     //Node node = clone currentNode
     PIFixed update = currentFeatures //node.features
-    update.nonBlankLines += 1
+    /* update.nonBlankLines += 1 */
     //Operation lineInfo = node.lineInfo
     String tokens[] = getLineComponents(newLine)
     // Check if we are currently within a subscope:
@@ -210,9 +320,15 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     }
     else if (lineType == 1) {
       // 1 = declaration
-      if (tokens[0] == inputVarType) {
+      update.totalVars += 1
+      /* if (tokens[0] == inputVarType) {
         update.nonInputVars += 1
-      }
+      } */
+      if (decType == 0) update.totalInts += 1
+      else if (decType == 1) update.totalDecs += 1
+      else if (decType == 2) update.totalChars += 1
+      else if (decType == 3) update.totalBools += 1
+      else if (decType == 4) update.totalDatas += 1
     }
     else if (lineType == 2) {
       // 2 = assignment - we could increase the number of assignment types

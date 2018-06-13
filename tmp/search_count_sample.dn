@@ -8,7 +8,7 @@ component provides Int_IntArray_Int_Function {
 		int ndx
 		int test
 		bool condition
-		
+
 		top = a.arrayLength
 		increment = 1
 

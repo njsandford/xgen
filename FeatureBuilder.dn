@@ -27,11 +27,12 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
 
   PIFixed FeatureBuilder:getNewFeatureVector() {
     PIFixed features = new PIFixed()
-    features.totalLines = 0 // This might be better as nonBlankLines, and have a separate value for program length?
+    /* features.totalLines = 0 // This might be better as nonBlankLines, and have a separate value for program length? */
     /* features.nonBlankLines = 0 */
-    features.blankLines = 0
-    features.totalVars = 0
-    features.nonInputVars = 0
+    /* features.blankLines = 0
+    features.totalVars = 0 */
+    features.varTypes = new VariableTypes()
+    /* features.nonInputVars = 0
     features.totalAssignments = 0
     features.totalWhiles = 0
     features.totalIfs = 0
@@ -39,10 +40,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     features.totalReturns = 0
     features.aveLoopLength = 0
     features.aveWhileLength = 0
-    features.highestNestingLevel = 0
+    features.highestNestingLevel = 0 */
     features.remainingLinesInBlock = new Stack()
-    features.totalLoopLength = 0
-    features.totalWhileLength = 0
+    /* features.totalLoopLength = 0
+    features.totalWhileLength = 0 */
     return features
   }
 
@@ -118,27 +119,27 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
-    if (currentFeatures.totalInts > providedFeatures.totalInts) {
+    if (currentFeatures.varTypes.totalInts > providedFeatures.varTypes.totalInts) {
       rejectedBranches += 1
       output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
-    if (currentFeatures.totalDecs > providedFeatures.totalDecs) {
+    if (currentFeatures.varTypes.totalDecs > providedFeatures.varTypes.totalDecs) {
       rejectedBranches += 1
       output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
-    if (currentFeatures.totalBools > providedFeatures.totalBools) {
+    if (currentFeatures.varTypes.totalBools > providedFeatures.varTypes.totalBools) {
       rejectedBranches += 1
       output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
-    if (currentFeatures.totalChars > providedFeatures.totalChars) {
+    if (currentFeatures.varTypes.totalChars > providedFeatures.varTypes.totalChars) {
       rejectedBranches += 1
       output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
-    if (currentFeatures.totalDatas > providedFeatures.totalDatas) {
+    if (currentFeatures.varTypes.totalDatas > providedFeatures.varTypes.totalDatas) {
       rejectedBranches += 1
       output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
@@ -198,31 +199,31 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
         output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
         return false
       }
-      if (providedFeatures.totalInts > current.totalInts) {
+      if (providedFeatures.varTypes.totalInts > current.varTypes.totalInts) {
         // Not enough assignments made, so not reachable.
         rejectedBranches += 1
         output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
         return false
       }
-      if (providedFeatures.totalDecs > current.totalDecs) {
+      if (providedFeatures.varTypes.totalDecs > current.varTypes.totalDecs) {
         // Not enough assignments made, so not reachable.
         rejectedBranches += 1
         output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
         return false
       }
-      if (providedFeatures.totalBools > current.totalBools) {
+      if (providedFeatures.varTypes.totalBools > current.varTypes.totalBools) {
         // Not enough assignments made, so not reachable.
         rejectedBranches += 1
         output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
         return false
       }
-      if (providedFeatures.totalChars > current.totalChars) {
+      if (providedFeatures.varTypes.totalChars > current.varTypes.totalChars) {
         // Not enough assignments made, so not reachable.
         rejectedBranches += 1
         output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
         return false
       }
-      if (providedFeatures.totalDatas > current.totalDatas) {
+      if (providedFeatures.varTypes.totalDatas > current.varTypes.totalDatas) {
         // Not enough assignments made, so not reachable.
         rejectedBranches += 1
         output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
@@ -263,11 +264,11 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       /* minFeatures = minFeatures && (providedFeatures.nonBlankLines <= currentFeatures.nonBlankLines) */
       minFeatures = minFeatures && (providedFeatures.blankLines <= currentFeatures.blankLines)
       minFeatures = minFeatures && (providedFeatures.totalVars <= currentFeatures.totalVars)
-      minFeatures = minFeatures && (providedFeatures.totalInts <= currentFeatures.totalInts)
-      minFeatures = minFeatures && (providedFeatures.totalDecs <= currentFeatures.totalDecs)
-      minFeatures = minFeatures && (providedFeatures.totalBools <= currentFeatures.totalBools)
-      minFeatures = minFeatures && (providedFeatures.totalChars <= currentFeatures.totalChars)
-      minFeatures = minFeatures && (providedFeatures.totalDatas <= currentFeatures.totalDatas)
+      minFeatures = minFeatures && (providedFeatures.varTypes.totalInts <= currentFeatures.varTypes.totalInts)
+      minFeatures = minFeatures && (providedFeatures.varTypes.totalDecs <= currentFeatures.varTypes.totalDecs)
+      minFeatures = minFeatures && (providedFeatures.varTypes.totalBools <= currentFeatures.varTypes.totalBools)
+      minFeatures = minFeatures && (providedFeatures.varTypes.totalChars <= currentFeatures.varTypes.totalChars)
+      minFeatures = minFeatures && (providedFeatures.varTypes.totalDatas <= currentFeatures.varTypes.totalDatas)
       /* minFeatures = minFeatures && (providedFeatures.nonInputVars <= currentFeatures.nonInputVars) */
       minFeatures = minFeatures && (providedFeatures.totalAssignments <= currentFeatures.totalAssignments)
       minFeatures = minFeatures && (providedFeatures.totalWhiles <= currentFeatures.totalWhiles)
@@ -324,11 +325,13 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       /* if (tokens[0] == inputVarType) {
         update.nonInputVars += 1
       } */
-      if (decType == 0) update.totalInts += 1
-      else if (decType == 1) update.totalDecs += 1
-      else if (decType == 2) update.totalChars += 1
-      else if (decType == 3) update.totalBools += 1
-      else if (decType == 4) update.totalDatas += 1
+      VariableTypes vts = update.varTypes
+      if (decType == 1) vts.totalInts += 1
+      else if (decType == 2) vts.totalDecs += 1
+      else if (decType == 3) vts.totalChars += 1
+      else if (decType == 4) vts.totalBools += 1
+      else if (decType == 5) vts.totalDatas += 1
+      update.varTypes = vts
     }
     else if (lineType == 2) {
       // 2 = assignment - we could increase the number of assignment types

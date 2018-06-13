@@ -6,16 +6,59 @@ data FeatureVector {
   int totalLines
 }
 
-// Position-independent features, fixed number of features
-data PIFixed extends FeatureVector {
-  /* int nonBlankLines */
-  int blankLines
-  int totalVars
+data VariableTypes {
   int totalInts
   int totalDecs
   int totalChars
   int totalBools
   int totalDatas
+}
+
+data AssignmentTypes {
+  int totalVarToLit
+  int totalVarToVar
+  int totalVarToInd
+  int totalVarToOp
+  int totalIndToLit
+  int totalIndToVar
+  int totalIndToInd
+  int totalIndToOp
+}
+
+data OperatorTypes {
+  int totalAdd
+  int totalSub
+  int totalMul
+  int totalDiv
+  int totalMod
+  int totalBOr
+  int totalBAnd
+  int totalBXor
+  int totalBFlip
+  int totalLShift
+  int totalRShift
+  int totalSEqu
+  int totalSNotEqu
+  int totalGreater
+  int totalLess
+  int totalGreaterEqu
+  int totalLessEqu
+  int totalNot
+  int totalEqu
+  int totalNotEqu
+}
+
+// Position-independent features, fixed number of features
+data PIFixed extends FeatureVector {
+  /* int nonBlankLines */
+  int blankLines
+  int totalVars
+  VariableTypes varTypes
+  /* int totalInts
+  int totalDecs
+  int totalChars
+  int totalBools
+  int totalDatas */
   // Number of variables used not of input Variable type
   int nonInputVars
   // NOTE: May need to make this a 'total' rather than average for updating each line.
@@ -37,46 +80,6 @@ data PIFixed extends FeatureVector {
   int totalLoopLength
   int totalWhileLength
   int minimumLinesToComplete // Value representing how many lines are needed to include the specified features
-}
-
-data Variables {
-  int totalInts
-  int totalDecs
-  int totalChars
-  int totalBools
-  int totalDatas
-}
-
-data Assignments {
-  int totalVarToLit
-  int totalVarToVar
-  int totalVarToOp
-  int totalIndToLit
-  int totalIndToVar
-  int totalIndToOp
-}
-
-data Operations {
-  int totalAdd
-  int totalSub
-  int totalMul
-  int totalDiv
-  int totalMod
-  int totalBOr
-  int totalBAnd
-  int totalBXor
-  int totalBFlip
-  int totalLShift
-  int totalRShift
-  int totalSEqu
-  int totalSNotEqu
-  int totalGreater
-  int totalLess
-  int totalGreaterEqu
-  int totalLessEqu
-  int totalNot
-  int totalEqu
-  int totalNotEqu
 }
 
 // Position-dependent features, fixed number of features

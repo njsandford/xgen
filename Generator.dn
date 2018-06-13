@@ -561,12 +561,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 					char name[] = "locv_$(iu.intToString(ins.arrayLength))"
 
-					int typeNumber
-					if (types[i].name == "int") typeNumber = 0
-					else if (types[i].name == "dec") typeNumber = 1
-					else if (types[i].name == "char") typeNumber = 2
-					else if (types[i].name == "bool") typeNumber = 3
-					else if (types[i].name == "Data") typeNumber = 4
+					int typeNumber = 0 // start actual types at 1 incase there are addtional types which would leave typeNumber as 0 by default.
+					if (types[i].name == "int") typeNumber = 1
+					else if (types[i].name == "dec") typeNumber = 2
+					else if (types[i].name == "char") typeNumber = 3
+					else if (types[i].name == "bool") typeNumber = 4
+					else if (types[i].name == "Data") typeNumber = 5
 
 					Operation newOp
 					if (types[i].type.class == Type.ARRAY)
@@ -1516,7 +1516,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					Operation lineInfo = currentNode.lineInfo
 					options[i].features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType)
 
-					bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, ps.globalLines - ps.lineIndex)
+					bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, ps.globalLines - ps.lineIndexf)
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, lineCount-1)
 
 					if (rejectEarly || !programIsReachable)
@@ -1550,7 +1550,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 						options[i].lines = new int[](start.lines, set)
 
-						ps.lineIndex ++
+						ps.lineIndexf ++
 						int continueLineCount = lineCount - 1
 
 						//check for a sub-scope, and populate it if existing
@@ -1559,7 +1559,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							SearchScope sc = options[i].subLines[start.subLines.arrayLength]
 							sc.subLinesStart = options[i].lines.arrayLength
 
-							PermutationSet subps = new PermutationSet(sc.subLinesCount, ps.globalLines, ps.lineIndex, 1)
+							PermutationSet subps = new PermutationSet(sc.subLinesCount, ps.globalLines, ps.lineIndexf, 1)
 							sc.root.features = options[i].features
 
 							bool subGlobalFF = false
@@ -1573,7 +1573,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							}
 
 							continueLineCount -= sc.subLinesCount
-							ps.lineIndex += sc.subLinesCount
+							ps.lineIndexf += sc.subLinesCount
 
 							bool moreOptions = true
 							while (moreOptions)

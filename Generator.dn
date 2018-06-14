@@ -49,13 +49,19 @@ data Variable {
 	int typeIndex
 }
 
+data Assignment {
+	char line[]
+	int asmtType
+}
+
 /* NOTE: I think this represents a single line of a program? */
 data Operation {
 	Variable newVar // NOTE: What is this? Variable declaration?
 	char line[]
 	int lineType // The type of line this is: [0=local var call], 1=declaration, 2=assignment(NOTE: could have 2 types of assignment, e.g. a = b, and a = b + c), 3=if, 4=while, 5=return
 	int subLinesCount
-	int decType // declaration type, integer between 0 and 5 representing [int, dec, bool, char, void, Data]
+	int decType // declaration type, integer between 1 and 6 representing [int, dec, bool, char, void, Data]
+	int asmtType // assignment type, integer between 1 and 24
 }
 
 // NOTE:
@@ -581,65 +587,66 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return result
 		}
 
-		String[] getValidLiterals(Type t)
+		Assignment[] getValidLiterals(Type t, int asmtType)
 		{
-			String result[]
+			//String result[]
+			Assignment result[]
 
 			if (t.class == Type.INTEGER && t.flags == Type.F_BOOL)
 			{
-				result = new String[](result, new String("true"))
-				result = new String[](result, new String("false"))
+				result = new Assignment[](result, new Assignment("true", asmtType))
+				result = new Assignment[](result, new Assignment("false", asmtType))
 			}
 			else if (t.class == Type.INTEGER)
 			{
-				result = new String[](result, new String("0"))
-				result = new String[](result, new String("1"))
-				result = new String[](result, new String("2"))
-				result = new String[](result, new String("3"))
-				result = new String[](result, new String("4"))
-				result = new String[](result, new String("5"))
-				result = new String[](result, new String("6"))
-				result = new String[](result, new String("7"))
-				result = new String[](result, new String("8"))
-				result = new String[](result, new String("9"))
-				result = new String[](result, new String("10")) // is this needed?
+				result = new Assignment[](result, new Assignment("0", asmtType))
+				result = new Assignment[](result, new Assignment("1", asmtType))
+				result = new Assignment[](result, new Assignment("2", asmtType))
+				result = new Assignment[](result, new Assignment("3", asmtType))
+				result = new Assignment[](result, new Assignment("4", asmtType))
+				result = new Assignment[](result, new Assignment("5", asmtType))
+				result = new Assignment[](result, new Assignment("6", asmtType))
+				result = new Assignment[](result, new Assignment("7", asmtType))
+				result = new Assignment[](result, new Assignment("8", asmtType))
+				result = new Assignment[](result, new Assignment("9", asmtType))
+				result = new Assignment[](result, new Assignment("10", asmtType)) // is this needed?
 			}
 			else if (t.class == Type.DECIMAL)
 			{
-				result = new String[](result, new String("0.0"))
-				result = new String[](result, new String("0.1"))
-				result = new String[](result, new String("0.2"))
-				result = new String[](result, new String("0.3"))
-				result = new String[](result, new String("0.4"))
-				result = new String[](result, new String("0.5"))
-				result = new String[](result, new String("0.6"))
-				result = new String[](result, new String("0.7"))
-				result = new String[](result, new String("0.8"))
-				result = new String[](result, new String("0.9"))
-				result = new String[](result, new String("1.0")) // is this needed?
+				result = new Assignment[](result, new Assignment("0.0", asmtType))
+				result = new Assignment[](result, new Assignment("0.1", asmtType))
+				result = new Assignment[](result, new Assignment("0.2", asmtType))
+				result = new Assignment[](result, new Assignment("0.3", asmtType))
+				result = new Assignment[](result, new Assignment("0.4", asmtType))
+				result = new Assignment[](result, new Assignment("0.5", asmtType))
+				result = new Assignment[](result, new Assignment("0.6", asmtType))
+				result = new Assignment[](result, new Assignment("0.7", asmtType))
+				result = new Assignment[](result, new Assignment("0.8", asmtType))
+				result = new Assignment[](result, new Assignment("0.9", asmtType))
+				result = new Assignment[](result, new Assignment("1.0", asmtType)) // is this needed?
 			}
 
 			return result
 		}
 
-		String[] getValidVariables(int ins[], Type t)
+		Assignment[] getValidVariables(int ins[], Type t, int asmtType)
 		{
-			String result[]
+			Assignment result[]
 
 			for (int i = 0; i < ins.arrayLength; i++)
 			{
 				if (typesCompatible(t, types[ins[i]].type))
 				{
-					result = new String[](result, new String("locv_$(iu.intToString(i))"))
+					result = new Assignment[](result, new Assignment("locv_$(iu.intToString(i))", asmtType))
 				}
 			}
 
 			return result
 		}
 
-		String[] getValidVariableIndices(int ins[], Type t)
+		Assignment[] getValidVariableIndices(int ins[], Type t, int asmtType)
 		{
-			String result[]
+			Assignment result[]
 
 			for (int i = 0; i < ins.arrayLength; i++)
 			{
@@ -651,7 +658,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						{
 							if (typesMatch(types[ins[j]].type, getType("int").type))
 							{
-								result = new String[](result, new String("locv_$(iu.intToString(i))[locv_$(iu.intToString(j))]"))
+								result = new Assignment[](result, new Assignment("locv_$(iu.intToString(i))[locv_$(iu.intToString(j))]", asmtType))
 							}
 						}
 					}
@@ -660,9 +667,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				return result
 			}
 
-			String[] getValidVariableFields(int ins[], Type t)
+			Assignment[] getValidVariableFields(int ins[], Type t, int asmtType)
 			{
-				String result[]
+				Assignment result[]
 
 				for (int i = 0; i < ins.arrayLength; i++)
 				{
@@ -673,7 +680,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						{
 							if (typesCompatible(t, types[ins[i]].type.fields[j].type))
 							{
-								result = new String[](result, new String("locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[j].name)"))
+								result = new Assignment[](result, new Assignment("locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[j].name)", asmtType))
 							}
 						}
 					}
@@ -682,9 +689,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				return result
 			}
 
-			String[] getValidArrayConcatenations(int ins[], Type t)
+			Assignment[] getValidArrayConcatenations(int ins[], Type t, int asmtType)
 			{
-				String result[]
+				Assignment result[]
 
 				if (t.class == Type.ARRAY)
 				{
@@ -709,7 +716,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							if (typesCompatible(t, typeA) && typesCompatible(t, typeB) && typesCompatible(typeA, typeB))
 							{
 								char tname[] = getTypeName(t)
-								result = new String[](result, new String("new $(tname)[](locv_$(iu.intToString(i)), locv_$(iu.intToString(j)))"))
+								result = new Assignment[](result, new Assignment("new $(tname)[](locv_$(iu.intToString(i)), locv_$(iu.intToString(j)))", asmtType))
 							}
 						}
 					}
@@ -801,11 +808,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				return functionCall
 			}
 
-			String[] getFunctionVariants(int ins[], Function f, char prefix[])
+			Assignment[] getFunctionVariants(int ins[], Function f, char prefix[], int asmtType)
 			{
 				//out.println("generating variants for $prefix -- $(f.name)")
 
-				String result[]
+				Assignment result[]
 
 				if (f.parameters.arrayLength == 0)
 				return new String("$prefix$(f.name)()")
@@ -830,24 +837,24 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				}
 
 				char functionCall[] = getFunctionCallOption(f, params, hands)
-				result = new String[](result, new String("$prefix$functionCall"))
+				result = new Assignment[](result, new Assignment("$prefix$functionCall", asmtType))
 
 				while (!clockFinished(hands))
 				{
 					getNextClockPosition(hands)
 
 					functionCall = getFunctionCallOption(f, params, hands)
-					result = new String[](result, new String("$prefix$functionCall"))
+					result = new Assignment[](result, new Assignment("$prefix$functionCall", asmtType))
 				}
 
 				return result
 			}
 
-			String[] getOperatorVariants(int ins[], Function f)
+			Assignment[] getOperatorVariants(int ins[], Function f, int asmtType)
 			{
 				//out.println("generating variants for $prefix -- $(f.name)")
 
-				String result[]
+				Assignment result[]
 
 				if (f.parameters.arrayLength == 0)
 				return new String("$(f.name)")
@@ -891,7 +898,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							//for <t> parameters, it's possible to re-use the exact same call if a parameter matches multiple types
 							// - here we just check that we're not repeating a selected option
 							if (search.search(result, String.[string], new String(functionCall)) == null)
-							result = new String[](result, new String(functionCall))
+							result = new Assignment[](result, new Assignment(functionCall, asmtType))
 
 							while (!clockFinished(hands))
 							{
@@ -900,7 +907,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 								functionCall = getOperatorOption(f, params, hands)
 
 								if (search.search(result, String.[string], new String(functionCall)) == null)
-								result = new String[](result, new String(functionCall))
+								result = new Assignment[](result, new Assignment(functionCall, asmtType))
 							}
 						}
 					}
@@ -925,23 +932,23 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					}
 
 					char functionCall[] = getOperatorOption(f, params, hands)
-					result = new String[](result, new String(functionCall))
+					result = new Assignment[](result, new Assignment(functionCall, asmtType))
 
 					while (!clockFinished(hands))
 					{
 						getNextClockPosition(hands)
 
 						functionCall = getOperatorOption(f, params, hands)
-						result = new String[](result, new String(functionCall))
+						result = new Assignment[](result, new Assignment(functionCall, asmtType))
 					}
 				}
 
 				return result
 			}
 
-			String[] getValidFunctionCalls(int ins[], Type t)
+			Assignment[] getValidFunctionCalls(int ins[], Type t, int asmtType)
 			{
-				String result[]
+				Assignment result[]
 
 				// - iterate through every variable that we have; for each one iterate through all function calls with a compatible return type
 				//   - for each of these, we iterate through every possible variable for each parameter of the function
@@ -950,7 +957,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					if (typesCompatible(t, functions[j].returnType))
 					{
 						//generate a version of this function call with every possible parameter variant
-						result = new String[](result, getFunctionVariants(ins, functions[j], ""))
+						result = new Assignment[](result, getFunctionVariants(ins, functions[j], "", asmtType))
 					}
 				}
 
@@ -959,7 +966,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					if (typesCompatible(t, operators[j].returnType))
 					{
 						//generate a version of this operator with every possible parameter variant
-						result = new String[](result, getOperatorVariants(ins, operators[j]))
+						result = new Assignment[](result, getOperatorVariants(ins, operators[j], asmtType))
 					}
 				}
 
@@ -970,7 +977,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					{
 						if (types[ins[i]].type.class == Type.ARRAY)
 						{
-							result = new String[](result, new String("locv_$(iu.intToString(i)).arrayLength"))
+							result = new Assignment[](result, new Assignment("locv_$(iu.intToString(i)).arrayLength", asmtType))
 						}
 					}
 				}
@@ -990,9 +997,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				return f
 			}
 
-			String[] getValidGlobalObjectFunctionCalls(int ins[], Type t)
+			Assignment[] getValidGlobalObjectFunctionCalls(int ins[], Type t, int asmtType)
 			{
-				String result[]
+				Assignment result[]
 
 				// - iterate through every variable that we have; for each one iterate through all function calls with a compatible return type
 				//   - for each of these, we iterate through every possible variable for each parameter of the function
@@ -1007,9 +1014,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							//generate a version of this function call with every possible parameter variant
 							Function fnc = functionFromType(globalObjects[j].t.type.fields[k].name, ft)
 
-							String newOps[] = getFunctionVariants(ins, fnc, "$(globalObjects[j].name).")
+							Assignment newOps[] = getFunctionVariants(ins, fnc, "$(globalObjects[j].name).", asmtType)
 
-							result = new String[](result, newOps)
+							result = new Assignment[](result, newOps)
 						}
 					}
 				}
@@ -1017,9 +1024,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				return result
 			}
 
-			String[] getValidLocalObjectFunctionCalls(int ins[], Type t)
+			Assignment[] getValidLocalObjectFunctionCalls(int ins[], Type t, int asmtType)
 			{
-				String result[]
+				Assignment result[]
 
 				// - iterate through every variable that we have; for each one iterate through all function calls with a compatible return type
 				//   - for each of these, we iterate through every possible variable for each parameter of the function
@@ -1036,9 +1043,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 								//generate a version of this function call with every possible parameter variant
 								Function fnc = functionFromType(types[ins[j]].type.fields[k].name, ft)
 
-								String newOps[] = getFunctionVariants(ins, fnc, "locv_$(iu.intToString(j)).")
+								Assignment newOps[] = getFunctionVariants(ins, fnc, "locv_$(iu.intToString(j)).", asmtType)
 
-								result = new String[](result, newOps)
+								result = new Assignment[](result, newOps)
 							}
 						}
 					}
@@ -1047,25 +1054,25 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				return result
 			}
 
-			String[] getValidDataInstantiations(Type t)
+			Assignment[] getValidDataInstantiations(Type t, int asmtType)
 			{
 				//TODO: we could allow instantiation of any sub-type of "t"...?
 
-				String result[]
+				Assignment result[]
 
 				if (t.class == Type.DATA)
 				{
-					result = new String[](result, new String("new $(getTypeName(t))()"))
+					result = new Assignment[](result, new Assignment("new $(getTypeName(t))()", asmtType))
 				}
 
 				return result
 			}
 
-			String[] getValidObjectInstantiations(int ins[], Type t)
+			Assignment[] getValidObjectInstantiations(int ins[], Type t, int asmtType)
 			{
 				//TODO: we could allow instantiation of any sub-type of "t"...?
 
-				String result[]
+				Assignment result[]
 
 				if (t.class == Type.OBJECT)
 				{
@@ -1113,16 +1120,16 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 					Function fnc = functionFromType(tname, conType)
 
-					result = new String[](result, getFunctionVariants(ins, fnc, "new "))
+					result = new Assignment[](result, getFunctionVariants(ins, fnc, "new ", asmtType))
 				}
 			}
 
 			return result
 		}
 
-		String[] getValidArrayClones(int ins[], Type t)
+		Assignment[] getValidArrayClones(int ins[], Type t, int asmtType)
 		{
-			String result[]
+			Assignment result[]
 
 			if (t.class == Type.ARRAY)
 			{
@@ -1130,7 +1137,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 					if (types[ins[i]].type.class == Type.ARRAY && typesMatch(t, types[ins[i]].type))
 					{
-						result = new String[](result, new String("clone locv_$(iu.intToString(i))"))
+						result = new Assignment[](result, new Assignment("clone locv_$(iu.intToString(i))", asmtType))
 					}
 				}
 			}
@@ -1138,9 +1145,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return result
 		}
 
-		String[] getValidDataClones(int ins[], Type t)
+		Assignment[] getValidDataClones(int ins[], Type t, int asmtType)
 		{
-			String result[]
+			Assignment result[]
 
 			//NOTE: in this case we can actually do sub-type cloning...?
 			if (t.class == Type.DATA)
@@ -1149,7 +1156,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 					if (types[ins[i]].type.class == Type.DATA && typesMatch(t, types[ins[i]].type))
 					{
-						result = new String[](result, new String("clone locv_$(iu.intToString(i))"))
+						result = new Assignment[](result, new Assignment("clone locv_$(iu.intToString(i))", asmtType))
 					}
 				}
 			}
@@ -1158,43 +1165,59 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		}
 
 		/* creates a string array of all possible valid assignments */
-		String[] getValidAssignments(int ins[], Type t)
+		/* creates an assignment array of all possible valid assignments */
+	//	String[] getValidAssignments(int ins[], Type t)
+		Assignment[] getValidAssignments(int ins[], Type t)
 		{
-			String result[]
+			//String result[]
+			Assignment result[]
 
 			//from literal values
-			result = new String[](result, getValidLiterals(t))
+			//result = new String[](result, getValidLiterals(t))
+			result = new Assignment[](result, getValidLiterals(t, 1))
 
 			//from variables
-			result = new String[](result, getValidVariables(ins, t))
+			//result = new String[](result, getValidVariables(ins, t))
+			result = new Assignment[](result, getValidVariables(ins, t, 2))
+
 
 			//from array indices of variables
-			result = new String[](result, getValidVariableIndices(ins, t))
+			//result = new String[](result, getValidVariableIndices(ins, t))
+			result = new Assignment[](result, getValidVariableIndices(ins, t, 3))
 
 			//from fields of variables
-			result = new String[](result, getValidVariableFields(ins, t))
+			//result = new String[](result, getValidVariableFields(ins, t))
+			result = new Assignment[](result, getValidVariableFields(ins, t, 4))
 
 			//from new instantiations of data types
-			result = new String[](result, getValidDataInstantiations(t))
+			//result = new String[](result, getValidDataInstantiations(t))
+			result = new Assignment[](result, getValidDataInstantiations(t, 5))
 
 			//from new instantiations of object types
-			result = new String[](result, getValidObjectInstantiations(ins, t))
+			//result = new String[](result, getValidObjectInstantiations(ins, t))
+			result = new Assignment[](result, getValidObjectInstantiations(ins, t, 6))
 
 			//from new instantiations of array types by size, using available integer sizes (TODO)
 
 			//from concatenations of arrays
-			result = new String[](result, getValidArrayConcatenations(ins, t))
+			//result = new String[](result, getValidArrayConcatenations(ins, t))
+			result = new Assignment[](result, getValidArrayConcatenations(ins, t, 7))
 
 			//from cloned arrays / data
-			result = new String[](result, getValidArrayClones(ins, t))
-			result = new String[](result, getValidDataClones(ins, t))
+			//result = new String[](result, getValidArrayClones(ins, t))
+			result = new Assignment[](result, getValidArrayClones(ins, t, 8))
+			//result = new String[](result, getValidDataClones(ins, t))
+			result = new Assignment[](result, getValidDataClones(ins, t, 9))
 
 			//from function call results (including pseudo-functions representing operators)
-			result = new String[](result, getValidFunctionCalls(ins, t))
+			//result = new String[](result, getValidFunctionCalls(ins, t))
+			result = new Assignment[](result, getValidFunctionCalls(ins, t, 10))
 
 			//from object call results, from any in-scope objects (global/local)
-			result = new String[](result, getValidGlobalObjectFunctionCalls(ins, t))
-			result = new String[](result, getValidLocalObjectFunctionCalls(ins, t))
+			//result = new String[](result, getValidGlobalObjectFunctionCalls(ins, t))
+			result = new Assignment[](result, getValidGlobalObjectFunctionCalls(ins, t, 11))
+			//result = new String[](result, getValidLocalObjectFunctionCalls(ins, t))
+			result = new Assignment[](result, getValidLocalObjectFunctionCalls(ins, t, 12))
 
 			return result
 		}
@@ -1210,11 +1233,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			//scan every variable, and get everything of a matching type we could assign it to
 			for (int i = 0; i < ins.arrayLength; i++)
 			{
-				String options[] = getValidAssignments(ins, types[ins[i]].type)
+			//	String options[] = getValidAssignments(ins, types[ins[i]].type)
+				Assignment options[] = getValidAssignments(ins, types[ins[i]].type)
 
 				for (int j = 0; j < options.arrayLength; j++)
 				{
-					result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].string)", 2))
+					//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line.string)", 2))
+					result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[i].asmtType))
 				}
 			}
 
@@ -1225,7 +1250,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 					Type subtype = types[ins[i]].type.fields[0].type
 
-					String options[] = getValidAssignments(ins, subtype)
+					//String options[] = getValidAssignments(ins, subtype)
+					Assignment options[] = getValidAssignments(ins, subtype)
+
 
 					for (int j = 0; j < options.arrayLength; j++)
 					{
@@ -1235,7 +1262,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						{
 							if (typesMatch(getType("int").type, types[ins[k]].type))
 							{
-								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)", 2))
+								//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)", 2))
+								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[i].asmtType)))
 							}
 						}
 					}
@@ -1251,11 +1279,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					{
 						Type subtype = types[ins[i]].type.fields[n].type
 
-						String options[] = getValidAssignments(ins, subtype)
+						//String options[] = getValidAssignments(ins, subtype)
+						Assignment options[] = getValidAssignments(ins, subtype)
 
 						for (int j = 0; j < options.arrayLength; j++)
 						{
-							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)", 2))
+							//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)", 2))
+							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[i].asmtType)))
 						}
 					}
 				}
@@ -1268,11 +1298,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		{
 			Operation result[]
 
-			String options[] = getValidLocalObjectFunctionCalls(ins, null)
+			Assignment options[] = getValidLocalObjectFunctionCalls(ins, null, 12)
 
 			for (int j = 0; j < options.arrayLength; j++)
 			{
-				result = new Operation[](result, new Operation(null, "$(options[j].string)", 0)) // NOTE: should a local object call be given a line type? can it be a single line?
+				result = new Operation[](result, new Operation(null, "$(options[j].line)", 0)) // NOTE: should a local object call be given a line type? can it be a single line?
 			}
 
 			return result
@@ -1514,7 +1544,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					// 	-
 					Node currentNode = options[i]
 					Operation lineInfo = currentNode.lineInfo
-					options[i].features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType)
+					options[i].features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
 
 					bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, ps.globalLines - ps.lineIndexf)
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, lineCount-1)
@@ -1651,7 +1681,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					// NOTE: Measure final distance of feature vector here.
 					Node currentNode = options[i]
 					Operation lineInfo = currentNode.lineInfo
-					options[i].features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType)
+					options[i].features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
 					bool programClosenessCheck = featureBuilder.programHasMinimumFeatures(currentNode.features, lineCount)//true//featureBuilder.isProgramSimilar(options[i].features)
 
 					// Replace this with a check to find if all features are included.

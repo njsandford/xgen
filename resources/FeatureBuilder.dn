@@ -7,76 +7,84 @@ data FeatureVector {
 }
 
 data VariableTypes {
-  int totalInts
-  int totalDecs
-  int totalChars
-  int totalBools
-  int totalDatas
+  int totalInts // 1
+  int totalDecs // 2
+  int totalChars // 3
+  int totalBools // 4
+  int totalDatas // 5
+  int totalIntArrs // 6
+  int totalDecArrs // 7
+  int totalCharArrs // 8
+  int totalBoolArrs // 9
+  int totalDataArrs // 10
+  int totalObjs // 11
+  int totalObjArrs // 12
+  int totalFuncArrs // 13
 }
 
 data AssignmentTypes {
   // LHS = variable
-  int totalVarToLit
-  int totalVarToVar
-  int totalVarToInd
-  int totalVarToField
-  int totalVarToData
-  int totalVarToObj
-  int totalVarToArrConcat
-  int totalVarToArrClone
-  int totalVarToDataClone
-  int totalVarToFunc
-  int totalVarToGOFunc
-  int totalVarToLOFunc
+  int totalVarToLit // 1
+  int totalVarToVar // 2
+  int totalVarToInd // 3
+  int totalVarToField // 4
+  int totalVarToData // 5
+  int totalVarToObj // 6
+  int totalVarToArrConcat // 7
+  int totalVarToArrClone // 8
+  int totalVarToDataClone // 9
+  int totalVarToFunc // 10
+  int totalVarToGOFunc // 11
+  int totalVarToLOFunc // 12
   // LHS = variable indices
-  int totalIndToLit
-  int totalIndToVar
-  int totalIndToInd
-  int totalIndToField
-  int totalIndToData
-  int totalIndToObj
-  int totalIndToArrConcat
-  int totalIndToArrClone
-  int totalIndToDataClone
-  int totalIndToFunc
-  int totalIndToGOFunc
-  int totalIndToLOFunc
+  int totalIndToLit // 13
+  int totalIndToVar // 14
+  int totalIndToInd // 15
+  int totalIndToField // 16
+  int totalIndToData // 17
+  int totalIndToObj // 18
+  int totalIndToArrConcat // 19
+  int totalIndToArrClone // 20
+  int totalIndToDataClone // 21
+  int totalIndToFunc // 22
+  int totalIndToGOFunc // 23
+  int totalIndToLOFunc // 24
   // LHS = data
-  int totalDataToLit
-  int totalDataToVar
-  int totalDataToInd
-  int totalDataToField
-  int totalDataToData
-  int totalDataToObj
-  int totalDataToArrConcat
-  int totalDataToArrClone
-  int totalDataToDataClone
-  int totalDataToFunc
-  int totalDataToGOFunc
-  int totalDataToLOFunc
+  int totalDataToLit // 25
+  int totalDataToVar // 26
+  int totalDataToInd // 27
+  int totalDataToField // 28
+  int totalDataToData // 29
+  int totalDataToObj // 30
+  int totalDataToArrConcat // 31
+  int totalDataToArrClone // 32
+  int totalDataToDataClone // 33
+  int totalDataToFunc // 34
+  int totalDataToGOFunc // 35
+  int totalDataToLOFunc // 36
 }
 
 data OperatorTypes {
-  int totalAdd
-  int totalSub
-  int totalMul
-  int totalDiv
-  int totalMod
-  int totalBOr
-  int totalBAnd
-  int totalBXor
-  int totalBFlip
-  int totalLShift
-  int totalRShift
-  int totalSEqu
-  int totalSNotEqu
-  int totalGreater
-  int totalLess
-  int totalGreaterEqu
-  int totalLessEqu
-  int totalNot
-  int totalEqu
-  int totalNotEqu
+  int totalAdd // 1
+  int totalSub // 2
+  int totalMul // 3
+  int totalDiv // 4
+  int totalMod // 5
+  int totalBOr // 6
+  int totalBAnd // 7
+  int totalBXor // 8
+  int totalBFlip // 9
+  int totalLShift // 10
+  int totalRShift // 11
+  int totalSEqu // 12
+  int totalSNotEqu // 13
+  int totalGreater // 14
+  int totalLess // 15
+  int totalGreaterEqu // 16
+  int totalLessEqu // 17
+  int totalNot // 18
+  int totalEqu // 19
+  int totalNotEqu // 20
 }
 
 // Position-independent features, fixed number of features
@@ -85,11 +93,6 @@ data PIFixed extends FeatureVector {
   int blankLines
   int totalVars
   VariableTypes varTypes
-  /* int totalInts
-  int totalDecs
-  int totalChars
-  int totalBools
-  int totalDatas */
   // Number of variables used not of input Variable type
   int nonInputVars
   // NOTE: May need to make this a 'total' rather than average for updating each line.
@@ -136,6 +139,8 @@ interface FeatureBuilder {
   /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
   /* FeatureVector updateFeatureVector(FeatureVector current, String newLine) */
   PIFixed updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType, int asmtType) // Pass the new node, which contains the feature vector, the new line, and all information for the operation
+
+  bool rejectBranch(PIFixed current, bool declarationsComplete, int linesRemaining)
 
   bool rejectEarly(PIFixed currentFeatures, int linesRemaining)
 

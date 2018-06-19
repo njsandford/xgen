@@ -5,7 +5,7 @@ uses data.adt.Stack
 uses FunctionData
 uses Generator
 
-component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.Output output, data.IntUtil intUtil {
+component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.Output output, data.IntUtil iu {
 
   /* FeatureBuilder:FeatureBuilder()
     {
@@ -48,18 +48,17 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   // get a new PIFixed feature vector for the current feature vector (of a node) plus the new line.
   // May be easier/make more sense to just pass a Node and get the feature vector from there.
   /* PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) { */
-  PIFixed FeatureBuilder:updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType, int asmtType) { //}, String inputVarType) {
+  PIFixed FeatureBuilder:updateFeatureVector(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType) { //}, String inputVarType) {
     // Node node = clone newNode
     //FeatureVector current = node.features
-    PIFixed features
-    if (currentFeatures == null) features = getNewFeatureVector()
-    else features = clone currentFeatures
+    PIFixed features = getNewFeatureVector()
+    if (existingFV != null) features = clone existingFV
 
-    features.totalLines ++
+    features.totalLines += 1
 
     // blank line:
     if (newLine == null) {
-      features.blankLines ++
+      features.blankLines += 1
       // Or return 0 or -1? Or throw exception?
       /* return null */
     }
@@ -74,6 +73,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   bool FeatureBuilder:hasMinLinesToCompleteFeatures(PIFixed current, int linesRemaining) { //}, int programLength) {
     //int currentLinesUsed = current.totalLines
     //int linesRemaining = programLength - currentLinesUsed
+    //if (linesRemaining < 1) return false
     int minRequired = 0
     if (current.totalVars < providedFeatures.totalVars) {
       minRequired += (providedFeatures.totalVars - current.totalVars)
@@ -94,89 +94,100 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   bool rejectAssignments(AssignmentTypes currentAsmtTypes, AssignmentTypes provAsmtTypes) {
     bool rejectAsmts = false
     // LHS =
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToLit > provAsmtTypes.totalVarToLit) || (currentAsmtTypes.totalIndToLit > provAsmtTypes.totalIndToLit) || (currentAsmtTypes.totalDataToLit > provAsmtTypes.totalDataToLit)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToVar > provAsmtTypes.totalVarToVar) || (currentAsmtTypes.totalIndToVar > provAsmtTypes.totalIndToVar) || (currentAsmtTypes.totalDataToVar > provAsmtTypes.totalDataToVar)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToInd > provAsmtTypes.totalVarToInd) || (currentAsmtTypes.totalIndToInd > provAsmtTypes.totalIndToInd) || (currentAsmtTypes.totalDataToInd > provAsmtTypes.totalDataToInd)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToField > provAsmtTypes.totalVarToField) || (currentAsmtTypes.totalIndToField > provAsmtTypes.totalIndToField) || (currentAsmtTypes.totalDataToField > provAsmtTypes.totalDataToField)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToData > provAsmtTypes.totalVarToData) || (currentAsmtTypes.totalIndToData > provAsmtTypes.totalIndToData) || (currentAsmtTypes.totalDataToData > provAsmtTypes.totalDataToData)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToObj > provAsmtTypes.totalVarToObj) || (currentAsmtTypes.totalIndToObj > provAsmtTypes.totalIndToObj) || (currentAsmtTypes.totalDataToObj > provAsmtTypes.totalDataToObj)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToArrConcat > provAsmtTypes.totalVarToArrConcat) || (currentAsmtTypes.totalIndToArrConcat > provAsmtTypes.totalIndToArrConcat) || (currentAsmtTypes.totalDataToArrConcat > provAsmtTypes.totalDataToArrConcat)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToArrClone > provAsmtTypes.totalVarToArrClone) || (currentAsmtTypes.totalIndToArrClone > provAsmtTypes.totalIndToArrClone) || (currentAsmtTypes.totalDataToArrClone > provAsmtTypes.totalDataToArrClone)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToDataClone > provAsmtTypes.totalVarToDataClone) || (currentAsmtTypes.totalIndToDataClone > provAsmtTypes.totalIndToDataClone) || (currentAsmtTypes.totalDataToDataClone > provAsmtTypes.totalDataToDataClone)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToFunc > provAsmtTypes.totalVarToFunc) || (currentAsmtTypes.totalIndToFunc > provAsmtTypes.totalIndToFunc) || (currentAsmtTypes.totalDataToFunc > provAsmtTypes.totalDataToFunc)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToGOFunc > provAsmtTypes.totalVarToGOFunc) || (currentAsmtTypes.totalIndToGOFunc > provAsmtTypes.totalIndToGOFunc) || (currentAsmtTypes.totalDataToGOFunc > provAsmtTypes.totalDataToGOFunc)
-    rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToLOFunc > provAsmtTypes.totalVarToLOFunc) || (currentAsmtTypes.totalIndToLOFunc > provAsmtTypes.totalIndToLOFunc) || (currentAsmtTypes.totalDataToLOFunc > provAsmtTypes.totalDataToLOFunc)
-
+    //while (rejectAsmts != true) {
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToLit > provAsmtTypes.totalVarToLit) || (currentAsmtTypes.totalIndToLit > provAsmtTypes.totalIndToLit) || (currentAsmtTypes.totalDataToLit > provAsmtTypes.totalDataToLit)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToVar > provAsmtTypes.totalVarToVar) || (currentAsmtTypes.totalIndToVar > provAsmtTypes.totalIndToVar) || (currentAsmtTypes.totalDataToVar > provAsmtTypes.totalDataToVar)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToInd > provAsmtTypes.totalVarToInd) || (currentAsmtTypes.totalIndToInd > provAsmtTypes.totalIndToInd) || (currentAsmtTypes.totalDataToInd > provAsmtTypes.totalDataToInd)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToField > provAsmtTypes.totalVarToField) || (currentAsmtTypes.totalIndToField > provAsmtTypes.totalIndToField) || (currentAsmtTypes.totalDataToField > provAsmtTypes.totalDataToField)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToData > provAsmtTypes.totalVarToData) || (currentAsmtTypes.totalIndToData > provAsmtTypes.totalIndToData) || (currentAsmtTypes.totalDataToData > provAsmtTypes.totalDataToData)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToObj > provAsmtTypes.totalVarToObj) || (currentAsmtTypes.totalIndToObj > provAsmtTypes.totalIndToObj) || (currentAsmtTypes.totalDataToObj > provAsmtTypes.totalDataToObj)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToArrConcat > provAsmtTypes.totalVarToArrConcat) || (currentAsmtTypes.totalIndToArrConcat > provAsmtTypes.totalIndToArrConcat) || (currentAsmtTypes.totalDataToArrConcat > provAsmtTypes.totalDataToArrConcat)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToArrClone > provAsmtTypes.totalVarToArrClone) || (currentAsmtTypes.totalIndToArrClone > provAsmtTypes.totalIndToArrClone) || (currentAsmtTypes.totalDataToArrClone > provAsmtTypes.totalDataToArrClone)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToDataClone > provAsmtTypes.totalVarToDataClone) || (currentAsmtTypes.totalIndToDataClone > provAsmtTypes.totalIndToDataClone) || (currentAsmtTypes.totalDataToDataClone > provAsmtTypes.totalDataToDataClone)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToFunc > provAsmtTypes.totalVarToFunc) || (currentAsmtTypes.totalIndToFunc > provAsmtTypes.totalIndToFunc) || (currentAsmtTypes.totalDataToFunc > provAsmtTypes.totalDataToFunc)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToGOFunc > provAsmtTypes.totalVarToGOFunc) || (currentAsmtTypes.totalIndToGOFunc > provAsmtTypes.totalIndToGOFunc) || (currentAsmtTypes.totalDataToGOFunc > provAsmtTypes.totalDataToGOFunc)
+      rejectAsmts = rejectAsmts || (currentAsmtTypes.totalVarToLOFunc > provAsmtTypes.totalVarToLOFunc) || (currentAsmtTypes.totalIndToLOFunc > provAsmtTypes.totalIndToLOFunc) || (currentAsmtTypes.totalDataToLOFunc > provAsmtTypes.totalDataToLOFunc)
+    //  return rejectAsmts
+    //}
     return rejectAsmts
   }
 
   bool FeatureBuilder:rejectEarly(PIFixed currentFeatures, int linesRemaining) {
     // NOTE: complete!
-    bool minLinesToComplete = hasMinLinesToCompleteFeatures(currentFeatures, linesRemaining)
-    if (!minLinesToComplete) {
-      //output.println("minLinesToComplete: $(intUtil.intToString(minLinesToComplete)), linesRemaining: $(intUtil.intToString(linesRemaining))")
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
-      return true // cannot complete all features in the remaining lines, so reject program.
-    }
     // Check if too many variables have been declared
     if (currentFeatures.totalVars > providedFeatures.totalVars) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      output.println("current vars: $(iu.intToString(currentFeatures.totalVars)), provided: $(iu.intToString(providedFeatures.totalVars))")
       return true
     }
     if (currentFeatures.varTypes.totalInts > providedFeatures.varTypes.totalInts) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      output.println("current ints: $(iu.intToString(currentFeatures.varTypes.totalInts)), provided: $(iu.intToString(providedFeatures.varTypes.totalInts))")
       return true
     }
     if (currentFeatures.varTypes.totalDecs > providedFeatures.varTypes.totalDecs) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      output.println("current decs: $(iu.intToString(currentFeatures.varTypes.totalDecs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDecs))")
       return true
     }
     if (currentFeatures.varTypes.totalBools > providedFeatures.varTypes.totalBools) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      output.println("current bools: $(iu.intToString(currentFeatures.varTypes.totalBools)), provided: $(iu.intToString(providedFeatures.varTypes.totalBools))")
       return true
     }
     if (currentFeatures.varTypes.totalChars > providedFeatures.varTypes.totalChars) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      output.println("current chars: $(iu.intToString(currentFeatures.varTypes.totalChars)), provided: $(iu.intToString(providedFeatures.varTypes.totalChars))")
       return true
     }
     if (currentFeatures.varTypes.totalDatas > providedFeatures.varTypes.totalDatas) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      output.println("current datas: $(iu.intToString(currentFeatures.varTypes.totalDatas)), provided: $(iu.intToString(providedFeatures.varTypes.totalDatas))")
+      return true
+    }
+    if (currentFeatures.varTypes.totalIntArrs > providedFeatures.varTypes.totalIntArrs) {
+      output.println("current int arrays: $(iu.intToString(currentFeatures.varTypes.totalIntArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalIntArrs))")
+      return true
+    }
+    if (currentFeatures.varTypes.totalDecArrs > providedFeatures.varTypes.totalDecArrs) {
+      output.println("current dec arrays: $(iu.intToString(currentFeatures.varTypes.totalDecArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDecArrs))")
+      return true
+    }
+    if (currentFeatures.varTypes.totalBoolArrs > providedFeatures.varTypes.totalBoolArrs) {
+      output.println("current bool arrays: $(iu.intToString(currentFeatures.varTypes.totalBoolArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalBoolArrs))")
+      return true
+    }
+    if (currentFeatures.varTypes.totalCharArrs > providedFeatures.varTypes.totalCharArrs) {
+      output.println("current char arrays: $(iu.intToString(currentFeatures.varTypes.totalCharArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalCharArrs))")
+      return true
+    }
+    if (currentFeatures.varTypes.totalDataArrs > providedFeatures.varTypes.totalDataArrs) {
+      output.println("current data arrays: $(iu.intToString(currentFeatures.varTypes.totalDataArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDataArrs))")
+      return true
+    }
+    if (currentFeatures.varTypes.totalObjs > providedFeatures.varTypes.totalObjs) {
+      output.println("current objects: $(iu.intToString(currentFeatures.varTypes.totalObjs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjs))")
+      return true
+    }
+    if (currentFeatures.varTypes.totalObjArrs > providedFeatures.varTypes.totalObjArrs) {
+      output.println("current object arrays: $(iu.intToString(currentFeatures.varTypes.totalObjArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjArrs))")
+      return true
+    }
+    if (currentFeatures.varTypes.totalFuncArrs > providedFeatures.varTypes.totalFuncArrs) {
+      output.println("current function arrays: $(iu.intToString(currentFeatures.varTypes.totalFuncArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalFuncArrs))")
       return true
     }
     if (currentFeatures.totalAssignments > providedFeatures.totalAssignments) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
     if (rejectAssignments(currentFeatures.asmtTypes, providedFeatures.asmtTypes)) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return true
     }
     if (currentFeatures.totalWhiles > providedFeatures.totalWhiles) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
     if (currentFeatures.totalIfs > providedFeatures.totalIfs) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
     if (currentFeatures.highestNestingLevel > providedFeatures.highestNestingLevel) {
-      rejectedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
       return true
     }
-    acceptedBranches ++
-    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
     return false
   }
 
@@ -197,6 +208,23 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     return totalDistance
   }
 
+  bool FeatureBuilder:rejectBranch(PIFixed current, bool declarationsComplete, int linesRemaining) {
+    bool minLinesToComplete = hasMinLinesToCompleteFeatures(current, linesRemaining)
+    bool areFeaturesReachable = areFeaturesReachable(current, declarationsComplete, linesRemaining)
+    bool rejectEarly = rejectEarly(current, linesRemaining)
+    if (rejectEarly || !minLinesToComplete || !areFeaturesReachable)//
+    {
+      rejectedBranches += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+      return true
+    }
+    else {
+      acceptedBranches += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+      return false
+    }
+  }
+
   // Decide if the provided features are reachable from the current FV.
   // NOTE could update this to include the order of assignments made, eg. ints before bools.
   bool FeatureBuilder:areFeaturesReachable(PIFixed current, bool declarationsComplete, int linesRemaining) {
@@ -206,46 +234,136 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       /* if (providedFeatures.totalAssignments > current.totalAssignments) { */
       if (providedFeatures.totalVars > current.totalVars) {
         // Not enough declarations made, so not reachable.
-        rejectedBranches ++
-        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
         return false
       }
       if (providedFeatures.varTypes.totalInts > current.varTypes.totalInts) {
         // Not enough assignments made, so not reachable.
-        rejectedBranches ++
-        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
         return false
       }
       if (providedFeatures.varTypes.totalDecs > current.varTypes.totalDecs) {
         // Not enough assignments made, so not reachable.
-        rejectedBranches ++
-        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
         return false
       }
       if (providedFeatures.varTypes.totalBools > current.varTypes.totalBools) {
         // Not enough assignments made, so not reachable.
-        rejectedBranches ++
-        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
         return false
       }
       if (providedFeatures.varTypes.totalChars > current.varTypes.totalChars) {
         // Not enough assignments made, so not reachable.
-        rejectedBranches ++
-        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
         return false
       }
       if (providedFeatures.varTypes.totalDatas > current.varTypes.totalDatas) {
         // Not enough assignments made, so not reachable.
-        rejectedBranches ++
-        output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
         return false
       }
-      acceptedBranches ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
-      return true
+      if (providedFeatures.varTypes.totalObjs > current.varTypes.totalObjs) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.varTypes.totalFuncArrs > current.varTypes.totalFuncArrs) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.totalAssignments > current.totalAssignments) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToLit > current.asmtTypes.totalVarToLit) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToVar > current.asmtTypes.totalVarToVar) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToInd > current.asmtTypes.totalVarToInd) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToField > current.asmtTypes.totalVarToField) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToData > current.asmtTypes.totalVarToData) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToObj > current.asmtTypes.totalVarToObj) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToArrConcat > current.asmtTypes.totalVarToArrConcat) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToArrClone > current.asmtTypes.totalVarToArrClone) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToDataClone > current.asmtTypes.totalVarToDataClone) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToFunc > current.asmtTypes.totalVarToFunc) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToGOFunc > current.asmtTypes.totalVarToGOFunc) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      if (providedFeatures.asmtTypes.totalVarToLOFunc > current.asmtTypes.totalVarToLOFunc) {
+        // Not enough assignments made, so not reachable.
+        /* rejectedBranches += 1
+        output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
+        return false
+      }
+      /* acceptedBranches += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+      return true */
     }
-    acceptedBranches ++
-    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+    /* acceptedBranches += 1
+    output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
     return true
   }
 
@@ -255,13 +373,13 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     int proximityToProvidedProgram = distanceBetweenVectors(providedFeatures, features)
     // move this to FeatureBuilder
     if (proximityToProvidedProgram <= maxDeviation) {
-      acceptedPrograms ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      acceptedPrograms += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return true
     }
     else {
-      rejectedPrograms ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+      rejectedPrograms += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return false
     }
   }
@@ -270,32 +388,55 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
     // If the features of the current node are similar enough to the provided feature vector, add it to tree.
     bool minFeatures = true
-    while (minFeatures == true) { // Save unneccasary computation if one of the features is not
-      /* minFeatures = minFeatures && (providedFeatures.totalLines <= currentFeatures.totalLines) */
-      /* minFeatures = minFeatures && (providedFeatures.nonBlankLines <= currentFeatures.nonBlankLines) */
-      minFeatures = minFeatures && (providedFeatures.blankLines <= currentFeatures.blankLines)
-      minFeatures = minFeatures && (providedFeatures.totalVars <= currentFeatures.totalVars)
-      minFeatures = minFeatures && (providedFeatures.varTypes.totalInts <= currentFeatures.varTypes.totalInts)
-      minFeatures = minFeatures && (providedFeatures.varTypes.totalDecs <= currentFeatures.varTypes.totalDecs)
-      minFeatures = minFeatures && (providedFeatures.varTypes.totalBools <= currentFeatures.varTypes.totalBools)
-      minFeatures = minFeatures && (providedFeatures.varTypes.totalChars <= currentFeatures.varTypes.totalChars)
-      minFeatures = minFeatures && (providedFeatures.varTypes.totalDatas <= currentFeatures.varTypes.totalDatas)
-      /* minFeatures = minFeatures && (providedFeatures.nonInputVars <= currentFeatures.nonInputVars) */
-      minFeatures = minFeatures && (providedFeatures.totalAssignments <= currentFeatures.totalAssignments)
-      minFeatures = minFeatures && (providedFeatures.totalWhiles <= currentFeatures.totalWhiles)
-      minFeatures = minFeatures && (providedFeatures.totalIfs <= currentFeatures.totalIfs)
-      /* totalDistance = getAbsValue(minFeatures && (providedFeatures.totalFunctionCalls - currentFeatures.totalFunctionCalls) */
-      // These features are probably not very useful...
-      /* minFeatures = minFeatures && (providedFeatures.aveLoopLength <= currentFeatures.aveLoopLength)
-      minFeatures = minFeatures && (providedFeatures.aveWhileLength <= currentFeatures.aveWhileLength) */
-      minFeatures = minFeatures && (providedFeatures.highestNestingLevel <= currentFeatures.highestNestingLevel)
-      acceptedPrograms ++
-      output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
+    /* while (minFeatures == true) { // Save unneccasary computation if one of the features is not */
+    /* minFeatures = minFeatures && (providedFeatures.totalLines <= currentFeatures.totalLines) */
+    minFeatures = minFeatures && (providedFeatures.blankLines <= currentFeatures.blankLines)
+    minFeatures = minFeatures && (providedFeatures.totalVars <= currentFeatures.totalVars)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalInts <= currentFeatures.varTypes.totalInts)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalDecs <= currentFeatures.varTypes.totalDecs)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalBools <= currentFeatures.varTypes.totalBools)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalChars <= currentFeatures.varTypes.totalChars)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalDatas <= currentFeatures.varTypes.totalDatas)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalIntArrs <= currentFeatures.varTypes.totalIntArrs)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalDecArrs <= currentFeatures.varTypes.totalDecArrs)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalBoolArrs <= currentFeatures.varTypes.totalBoolArrs)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalCharArrs <= currentFeatures.varTypes.totalCharArrs)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalDataArrs <= currentFeatures.varTypes.totalDataArrs)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalObjs <= currentFeatures.varTypes.totalObjs)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalObjArrs <= currentFeatures.varTypes.totalObjArrs)
+    minFeatures = minFeatures && (providedFeatures.varTypes.totalFuncArrs <= currentFeatures.varTypes.totalFuncArrs)
+    /* minFeatures = minFeatures && (providedFeatures.nonInputVars <= currentFeatures.nonInputVars) */
+    minFeatures = minFeatures && (providedFeatures.totalAssignments <= currentFeatures.totalAssignments)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToLit <= currentFeatures.asmtTypes.totalVarToLit) && (providedFeatures.asmtTypes.totalIndToLit <= currentFeatures.asmtTypes.totalIndToLit) && (providedFeatures.asmtTypes.totalDataToLit <= currentFeatures.asmtTypes.totalDataToLit)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToVar <= currentFeatures.asmtTypes.totalVarToVar) && (providedFeatures.asmtTypes.totalIndToVar <= currentFeatures.asmtTypes.totalIndToVar) && (providedFeatures.asmtTypes.totalDataToVar <= currentFeatures.asmtTypes.totalDataToVar)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToInd <= currentFeatures.asmtTypes.totalVarToInd) && (providedFeatures.asmtTypes.totalIndToInd <= currentFeatures.asmtTypes.totalIndToInd) && (providedFeatures.asmtTypes.totalDataToInd <= currentFeatures.asmtTypes.totalDataToInd)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToField <= currentFeatures.asmtTypes.totalVarToField) && (providedFeatures.asmtTypes.totalIndToField <= currentFeatures.asmtTypes.totalIndToField) && (providedFeatures.asmtTypes.totalDataToField <= currentFeatures.asmtTypes.totalDataToField)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToData <= currentFeatures.asmtTypes.totalVarToData) && (providedFeatures.asmtTypes.totalIndToData <= currentFeatures.asmtTypes.totalIndToData) && (providedFeatures.asmtTypes.totalDataToData <= currentFeatures.asmtTypes.totalDataToData)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToObj <= currentFeatures.asmtTypes.totalVarToObj) && (providedFeatures.asmtTypes.totalIndToObj <= currentFeatures.asmtTypes.totalIndToObj) && (providedFeatures.asmtTypes.totalDataToObj <= currentFeatures.asmtTypes.totalDataToObj)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToArrConcat <= currentFeatures.asmtTypes.totalVarToArrConcat) && (providedFeatures.asmtTypes.totalIndToArrConcat <= currentFeatures.asmtTypes.totalIndToArrConcat) && (providedFeatures.asmtTypes.totalDataToArrConcat <= currentFeatures.asmtTypes.totalDataToArrConcat)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToArrClone <= currentFeatures.asmtTypes.totalVarToArrClone) && (providedFeatures.asmtTypes.totalIndToArrClone <= currentFeatures.asmtTypes.totalIndToArrClone) && (providedFeatures.asmtTypes.totalDataToArrClone <= currentFeatures.asmtTypes.totalDataToArrClone)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToDataClone <= currentFeatures.asmtTypes.totalVarToDataClone) && (providedFeatures.asmtTypes.totalIndToDataClone <= currentFeatures.asmtTypes.totalIndToDataClone) && (providedFeatures.asmtTypes.totalDataToDataClone <= currentFeatures.asmtTypes.totalDataToDataClone)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToFunc <= currentFeatures.asmtTypes.totalVarToFunc) && (providedFeatures.asmtTypes.totalIndToFunc <= currentFeatures.asmtTypes.totalIndToFunc) && (providedFeatures.asmtTypes.totalDataToFunc <= currentFeatures.asmtTypes.totalDataToFunc)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToGOFunc <= currentFeatures.asmtTypes.totalVarToGOFunc) && (providedFeatures.asmtTypes.totalIndToGOFunc <= currentFeatures.asmtTypes.totalIndToGOFunc) && (providedFeatures.asmtTypes.totalDataToGOFunc <= currentFeatures.asmtTypes.totalDataToGOFunc)
+    minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToLOFunc <= currentFeatures.asmtTypes.totalVarToLOFunc) && (providedFeatures.asmtTypes.totalIndToLOFunc <= currentFeatures.asmtTypes.totalIndToLOFunc) && (providedFeatures.asmtTypes.totalDataToLOFunc <= currentFeatures.asmtTypes.totalDataToLOFunc)
+    minFeatures = minFeatures && (providedFeatures.totalWhiles <= currentFeatures.totalWhiles)
+    minFeatures = minFeatures && (providedFeatures.totalIfs <= currentFeatures.totalIfs)
+    minFeatures = minFeatures && (providedFeatures.totalFunctionCalls <= currentFeatures.totalFunctionCalls)
+    /* totalDistance = getAbsValue(minFeatures && (providedFeatures.totalFunctionCalls - currentFeatures.totalFunctionCalls) */
+    // These features are probably not very useful...
+    /* minFeatures = minFeatures && (providedFeatures.aveLoopLength <= currentFeatures.aveLoopLength)
+    minFeatures = minFeatures && (providedFeatures.aveWhileLength <= currentFeatures.aveWhileLength) */
+    minFeatures = minFeatures && (providedFeatures.highestNestingLevel <= currentFeatures.highestNestingLevel)
+    if (minFeatures) {
+      acceptedPrograms += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return true
     }
-    rejectedPrograms ++
-    output.print("\r rejectedBranches: $(intUtil.intToString(rejectedBranches)), acceptedBranches: $(intUtil.intToString(acceptedBranches)), rejectedPrograms: $(intUtil.intToString(rejectedPrograms)), acceptedPrograms: $(intUtil.intToString(acceptedPrograms)), lineCount: $(intUtil.intToString(linesRemaining))")
-    return false
+    else {
+      rejectedPrograms += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+      return false
+    }
   }
 
   String[] getLineComponents(char line[]) {
@@ -306,54 +447,55 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
 
   /* update the assignment type counts */
   AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType) {
-    if (asmtType == 1) asmtTypes.totalVarToLit ++
-    else if (asmtType == 2) asmtTypes.totalVarToVar ++
-    else if (asmtType == 3) asmtTypes.totalVarToInd ++
-    else if (asmtType == 4) asmtTypes.totalVarToField ++
-    else if (asmtType == 5) asmtTypes.totalVarToData ++
-    else if (asmtType == 6) asmtTypes.totalVarToObj ++
-    else if (asmtType == 7) asmtTypes.totalVarToArrConcat ++
-    else if (asmtType == 8) asmtTypes.totalVarToArrClone ++
-    else if (asmtType == 9) asmtTypes.totalVarToDataClone ++
-    else if (asmtType == 10) asmtTypes.totalVarToFunc ++
-    else if (asmtType == 11) asmtTypes.totalVarToGOFunc ++
-    else if (asmtType == 12) asmtTypes.totalVarToLOFunc ++
+    AssignmentTypes ats = asmtTypes
+    if (asmtType == 1) ats.totalVarToLit += 1
+    else if (asmtType == 2) ats.totalVarToVar += 1
+    else if (asmtType == 3) ats.totalVarToInd += 1
+    else if (asmtType == 4) ats.totalVarToField += 1
+    else if (asmtType == 5) ats.totalVarToData += 1
+    else if (asmtType == 6) ats.totalVarToObj += 1
+    else if (asmtType == 7) ats.totalVarToArrConcat += 1
+    else if (asmtType == 8) ats.totalVarToArrClone += 1
+    else if (asmtType == 9) ats.totalVarToDataClone += 1
+    else if (asmtType == 10) ats.totalVarToFunc += 1
+    else if (asmtType == 11) ats.totalVarToGOFunc += 1
+    else if (asmtType == 12) ats.totalVarToLOFunc += 1
     // LHS = variable indices
-    else if (asmtType == 13) asmtTypes.totalVarToLit ++
-    else if (asmtType == 14) asmtTypes.totalVarToVar ++
-    else if (asmtType == 15) asmtTypes.totalVarToInd ++
-    else if (asmtType == 16) asmtTypes.totalVarToField ++
-    else if (asmtType == 17) asmtTypes.totalVarToData ++
-    else if (asmtType == 18) asmtTypes.totalVarToObj ++
-    else if (asmtType == 19) asmtTypes.totalVarToArrConcat ++
-    else if (asmtType == 20) asmtTypes.totalVarToArrClone ++
-    else if (asmtType == 21) asmtTypes.totalVarToDataClone ++
-    else if (asmtType == 22) asmtTypes.totalVarToFunc ++
-    else if (asmtType == 23) asmtTypes.totalVarToGOFunc ++
-    else if (asmtType == 24) asmtTypes.totalVarToLOFunc ++
+    else if (asmtType == 13) ats.totalIndToLit += 1
+    else if (asmtType == 14) ats.totalIndToVar += 1
+    else if (asmtType == 15) ats.totalIndToInd += 1
+    else if (asmtType == 16) ats.totalIndToField += 1
+    else if (asmtType == 17) ats.totalIndToData += 1
+    else if (asmtType == 18) ats.totalIndToObj += 1
+    else if (asmtType == 19) ats.totalIndToArrConcat += 1
+    else if (asmtType == 20) ats.totalIndToArrClone += 1
+    else if (asmtType == 21) ats.totalIndToDataClone += 1
+    else if (asmtType == 22) ats.totalIndToFunc += 1
+    else if (asmtType == 23) ats.totalIndToGOFunc += 1
+    else if (asmtType == 24) ats.totalIndToLOFunc += 1
     // LHS = data
-    else if (asmtType == 25) asmtTypes.totalVarToLit ++
-    else if (asmtType == 26) asmtTypes.totalVarToVar ++
-    else if (asmtType == 27) asmtTypes.totalVarToInd ++
-    else if (asmtType == 28) asmtTypes.totalVarToField ++
-    else if (asmtType == 29) asmtTypes.totalVarToData ++
-    else if (asmtType == 30) asmtTypes.totalVarToObj ++
-    else if (asmtType == 31) asmtTypes.totalVarToArrConcat ++
-    else if (asmtType == 32) asmtTypes.totalVarToArrClone ++
-    else if (asmtType == 33) asmtTypes.totalVarToDataClone ++
-    else if (asmtType == 34) asmtTypes.totalVarToFunc ++
-    else if (asmtType == 35) asmtTypes.totalVarToGOFunc ++
-    else if (asmtType == 36) asmtTypes.totalVarToLOFunc ++
+    else if (asmtType == 25) ats.totalDataToLit += 1
+    else if (asmtType == 26) ats.totalDataToVar += 1
+    else if (asmtType == 27) ats.totalDataToInd += 1
+    else if (asmtType == 28) ats.totalDataToField += 1
+    else if (asmtType == 29) ats.totalDataToData += 1
+    else if (asmtType == 30) ats.totalDataToObj += 1
+    else if (asmtType == 31) ats.totalDataToArrConcat += 1
+    else if (asmtType == 32) ats.totalDataToArrClone += 1
+    else if (asmtType == 33) ats.totalDataToDataClone += 1
+    else if (asmtType == 34) ats.totalDataToFunc += 1
+    else if (asmtType == 35) ats.totalDataToGOFunc += 1
+    else if (asmtType == 36) ats.totalDataToLOFunc += 1
 
-    return asmtTypes
+    return ats
   }
 
   // NOTE: If function overloading is possible, have separate functions for each type of FeatureVector (when more than PIFixed is available!)
   /* FeatureVector doUpdate(Node currentNode) { */
   PIFixed doUpdate(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType, int asmtType) {
     //Node node = clone currentNode
-    PIFixed update = currentFeatures //node.features
-    /* update.nonBlankLines ++ */
+    PIFixed update = clone currentFeatures //node.features
+    /* update.nonBlankLines += 1 */
     //Operation lineInfo = node.lineInfo
     String tokens[] = getLineComponents(newLine)
     // Check if we are currently within a subscope:
@@ -363,39 +505,45 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
         update.remainingLinesInBlock.remove(update.remainingLinesInBlock.peek())
       }
       if (update.remainingLinesInBlock.getLength() != 0) {
-        //int updatedCount = update.remainingLinesInBlock.peek().linesRemaining - 1 // make a copy of top value and update it
         lineInfo = update.remainingLinesInBlock.peek()
         lineInfo.linesRemaining -= 1
         update.remainingLinesInBlock.update(update.remainingLinesInBlock.peek(), lineInfo)
-        /* update.remainingLinesInBlock.add(updatedCount) // replace with updated value */
       }
     }
     if (lineType == 0) {
       // 0 = local variable call
-      update.totalFunctionCalls ++
+      update.totalFunctionCalls += 1
     }
     else if (lineType == 1) {
       // 1 = declaration
-      update.totalVars ++
+      update.totalVars += 1
       /* if (tokens[0] == inputVarType) {
-        update.nonInputVars ++
+        update.nonInputVars += 1
       } */
       VariableTypes vts = update.varTypes
-      if (decType == 1) vts.totalInts ++
-      else if (decType == 2) vts.totalDecs ++
-      else if (decType == 3) vts.totalChars ++
-      else if (decType == 4) vts.totalBools ++
-      else if (decType == 5) vts.totalDatas ++
+      if (decType == 1) vts.totalInts += 1
+      else if (decType == 2) vts.totalDecs += 1
+      else if (decType == 3) vts.totalChars += 1
+      else if (decType == 4) vts.totalBools += 1
+      else if (decType == 5) vts.totalDatas += 1
+      else if (decType == 6) vts.totalIntArrs += 1
+      else if (decType == 7) vts.totalDecArrs += 1
+      else if (decType == 8) vts.totalCharArrs += 1
+      else if (decType == 9) vts.totalBoolArrs += 1
+      else if (decType == 10) vts.totalDataArrs += 1
+      else if (decType == 11) vts.totalObjs += 1
+      else if (decType == 12) vts.totalObjArrs += 1
+      else if (decType == 13) vts.totalFuncArrs += 1
       update.varTypes = vts
     }
     else if (lineType == 2) {
       // 2 = assignment - we could increase the number of assignment types
-      update.totalAssignments ++
+      update.totalAssignments += 1
       update.asmtTypes = updateAssignmentTypes(update.asmtTypes, asmtType)
     }
     else if (lineType == 3) {
       // 3 = if statement
-      update.totalIfs ++
+      update.totalIfs += 1
       // update average if statement length
       update.totalLoopLength += subLinesCount
       update.aveLoopLength = update.totalLoopLength / update.totalIfs
@@ -409,7 +557,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     }
     else if (lineType == 4) {
       // 4 = while loop
-      update.totalWhiles ++
+      update.totalWhiles += 1
       // Update average while loop length
       update.totalWhileLength += subLinesCount
       update.aveWhileLength = update.totalWhileLength / update.totalWhiles
@@ -424,73 +572,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     }
     else if (lineType == 5) {
       // 5 = return
-      update.totalReturns ++
+      update.totalReturns += 1
     }
     return update
   }
-/*
-    String[] tokens = getLineComponents
-    /* if (tokens.arrayLength == 1) {
-      // One token, must be either { or }, so signals a nesting level
-      if (tokens[0] == '{') {
-        current.openBrackets ++
-        if (current.openBrackets > current.highestNestingLevel) {
-          // If current nesting level is greater than highest, update it
-          current.highestNestingLevel = current.openBrackets
-        }
-      }
-      else {
-        // Closing bracket, reduce current nesting level
-        current.openBrackets -= 1
-      }
-    } */
-    /* // 2 tokens is a declaration or control block
-    else if (tokens.arrayLength == 2) {
-      // If first token is a type, then it is a declaration
-      // NOTE: This can be done in buildNextLine in Generator.dn
-      if (tokens[0] == "int" || tokens[0] == "dec" || tokens[0] == "char" || tokens[0] == "bool") {
-        update.totalVars ++
-        if (tokens[0] == inputVarType) {
-          update.nonInputVars ++
-        }
-      }
-      // Else check if a control block
-      else if (tokens[0] == "if") {
-        update.totalIfs ++
-      }
-      else if (tokens[0] == "while") {
-         update.totalWhiles ++
-      } */
-      /* else {
-        // Must be a return statement
-        // NOTE: what would be appropriate here, if anything?
-      } */
-    /* }
-    // -- Not a declaration or control block --
-    else if (tokens.arrayLength >= 3) {
-      // 3 tokens is assignment
-      if (tokens[1] == "=") {
-        // Assignment statement
-        if (tokens.arrayLength == 3) {
-          if (tokens[0] != tokens[2]) {
-            update.totalVarInteractions ++
-          }
-        }
-        else if (tokens.arrayLength == 5) {
-          if (tokens[0] != tokens[2] && tokens[2] != tokens[4] && tokens[0] != tokens[4]) {
-            update.totalVarInteractions += 3
-          }
-          else if (tokens[0] != tokens[2] || tokens[2] != tokens[4]) {
-            update.totalVarInteractions += 2
-          }
-          else {
-            update.totalVarInteractions ++
-          }
-        }
-      }
-    }
-    return update
-  }  */
 
   int differenceBetweenInts(int lhs, int rhs) {
     if (lhs == rhs) return 0

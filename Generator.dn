@@ -25,7 +25,6 @@ data Node extends Option
 data PermutationSet {
 	int totalLines
 	int globalLines
-	int lineIndexf
 	int limit
 	int found
 	Node nodes[]
@@ -97,8 +96,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		new DataType("dec", null, new Type(Type.DECIMAL, 0, HOST_DEC_SIZE)),
 		new DataType("char", null, new Type(Type.INTEGER, Type.F_CHAR, 1)),
 		new DataType("bool", null, new Type(Type.INTEGER, Type.F_BOOL, 1)),
-		new DataType("void", null, new Type(Type.INTEGER, 0, 0)),
-		new DataType("Data", null, new Type(Type.DATA, 0, 0))
+		new DataType("Data", null, new Type(Type.DATA, 0, 0)),
+		new DataType("void", null, new Type(Type.INTEGER, 0, 0))
 		)
 
 		Function functions[]
@@ -573,6 +572,15 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					else if (types[i].name == "char") typeNumber = 3
 					else if (types[i].name == "bool") typeNumber = 4
 					else if (types[i].name == "Data") typeNumber = 5
+					else if (types[i].name == "int[]") typeNumber = 6
+					else if (types[i].name == "dec[]") typeNumber = 7
+					else if (types[i].name == "char[]") typeNumber = 8
+					else if (types[i].name == "bool[]") typeNumber = 9
+					else if (types[i].name == "Data[]") typeNumber = 10
+					else if (types[i].name == "Object") typeNumber = 11
+					else if (types[i].name == "Object[]") typeNumber = 12
+					else if (types[i].name == "$(providedInterfaceType)[]") typeNumber = 13
+					else typeNumber = 0
 
 					Operation newOp
 					if (types[i].type.class == Type.ARRAY)
@@ -1239,7 +1247,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				for (int j = 0; j < options.arrayLength; j++)
 				{
 					//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line.string)", 2))
-					result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[i].asmtType))
+					result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType))
 				}
 			}
 
@@ -1263,7 +1271,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							if (typesMatch(getType("int").type, types[ins[k]].type))
 							{
 								//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)", 2))
-								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[i].asmtType)))
+								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType)))
 							}
 						}
 					}
@@ -1285,7 +1293,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						for (int j = 0; j < options.arrayLength; j++)
 						{
 							//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)", 2))
-							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[i].asmtType)))
+							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType)))
 						}
 					}
 				}
@@ -1423,10 +1431,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				Node newNode = clone n
 				newNode.inScope = newins
 				newNode.subLines = newss
-				Operation lineInfo = newNode.lineInfo
+				//Operation lineInfo = newNode.lineInfo
 				newNode.lineInfo = ops[j] // Pass the current operation to the new node
 				//lineInfo.line = newLine // Added this to be used by feature builder.
 				//lineInfo.lineType = newlt // Added lineType var for feature builder
+				/* newNode.features = clone n.features */
 
 				if (ops[j].newVar == null) {
 					newNode.declarationsComplete = true
@@ -1509,11 +1518,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 		//NOTE: this function operates by "return" purely because adding to a global array within "ps" is super slow
 		// (as it tends to expand an already-big array, rather than expanding incrementally smaller arrays as it goes)
-		Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, bool addReturn, FeatureBuilder featureBuilder)
+		Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, int globalLineCount, bool addReturn, FeatureBuilder featureBuilder)
 		{
 			Node programs[]
 			//int linesRemaining = ps.totalLines - lineCount // NOT lines remaining - more like lines used?
 			//out.println("totalLines: $(iu.intToString(ps.totalLines)), lineCount: $(iu.intToString(lineCount)), linesRemaining: $(iu.intToString(linesRemaining))")
+
+			int linesRemaining = globalLineCount - 1
 
 			if (lineCount > 0)
 			{
@@ -1542,46 +1553,56 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					//  -
 					//  - Maybe should first check if declarations are finished, and if so, do a reachability test?
 					// 	-
-					Node currentNode = options[i]
-					Operation lineInfo = currentNode.lineInfo
-					options[i].features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
+					/* Node currentNode = options[i] */
+					Operation lineInfo = clone options[i].lineInfo
+					PIFixed newFeatures = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
+					/* options[i].features = featureBuilder.updateFeatureVector(options[i].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
 
-					bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, ps.globalLines - ps.lineIndexf)
-					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, lineCount-1)
+					/* bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, linesRemaining)
+					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, linesRemaining) */
 
-					if (rejectEarly || !programIsReachable)
-						{
+					bool rejectBranch = featureBuilder.rejectBranch(newFeatures, options[i].declarationsComplete, linesRemaining)
+
+					if (rejectBranch)// (!rejectEarly && programIsReachable)
+					{
 						testsFailed ++
 
-						if (testsFailed % 100 == 0 && !addReturn)
-							{
-								//out.println("ACL: $(iu.intToString(start.lines.arrayLength))")
-								options[i].lines = new int[](start.lines, set)
-								//(+2 to skip function header)
-								int postIndex = (options[i].arrayLength) + 2
-								for (int j = 0; j < lineCount-1; j++) {
-									options[i].lines = new int[](options[i].lines, 0)
-								}
-								String lines[] = decodeOption(testFunction, options[i])
-								out.println("")
-							  for (int j = 0; j < lines.arrayLength; j++) {
-							  	out.print(lines[j].string)
-									if (postIndex == j) out.println(" << --")
-									else out.println("")
-							  }
+						/* if (testsFailed % 100 == 0 && addReturn)
+						{ */
+							//out.println("ACL: $(iu.intToString(start.lines.arrayLength))")
+							options[i].lines = new int[](start.lines, set)
+							out.println("line count $(iu.intToString(options[i].arrayLength))/$(iu.intToString(lineCount)), globalLineCount $(iu.intToString(globalLineCount))")
+							out.println("decType $(iu.intToString(options[i].lineInfo.decType))")
+							out.println("asmtType $(iu.intToString(options[i].lineInfo.asmtType))")
+							out.println("line $(options[i].lineInfo.line)")
+							//(+2 to skip function header)
+							//int postIndex = (options[i].arrayLength) + 2
+							for (int j = 0; j < lineCount; j++) {
+								options[i].lines = new int[](options[i].lines, 0)
 							}
-						}
+							String lines[] = decodeOption(testFunction, options[i])
+							out.println("")
+						  for (int j = 0; j < lines.arrayLength; j++) {
+						  	out.print(lines[j].string)
+								if (lines[j].string == options[i].lineInfo.line) out.println(" << --")
+								else out.println("")
+						  }
+						/* } */
+					}
 
 					/* if (!rejectEarly && programIsReachable) { */
-					if (!rejectEarly && programIsReachable) {
-
+					if (!rejectBranch)//(!rejectEarly && programIsReachable)
+					{
+						/* options[i].features = newFeatures */
 						// Decide if the current program is reachable - if not, don't continue.
 						// return ???
 
 						options[i].lines = new int[](start.lines, set)
 
-						ps.lineIndexf ++
+						//ps.lineIndex ++
+						/* int nextGLI = globalLineCount + 1 */
 						int continueLineCount = lineCount - 1
+						//int continueGlobalLineCount = linesRemaining
 
 						//check for a sub-scope, and populate it if existing
 						if (options[i].subLines.arrayLength != start.subLines.arrayLength)
@@ -1589,7 +1610,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							SearchScope sc = options[i].subLines[start.subLines.arrayLength]
 							sc.subLinesStart = options[i].lines.arrayLength
 
-							PermutationSet subps = new PermutationSet(sc.subLinesCount, ps.globalLines, ps.lineIndexf, 1)
+							PermutationSet subps = new PermutationSet(sc.subLinesCount, ps.globalLines, ps.totalLines - lineCount, 1)
 							sc.root.features = options[i].features
 
 							bool subGlobalFF = false
@@ -1603,13 +1624,14 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							}
 
 							continueLineCount -= sc.subLinesCount
-							ps.lineIndexf += sc.subLinesCount
+							//int subGLI = nextGLI + sc.subLinesCount
+							int subGLCount = linesRemaining - sc.subLinesCount
 
 							bool moreOptions = true
 							while (moreOptions)
 							{
 								subps.found = 0
-								Node subOption[] = buildLines(subps, subps.nextNode, subGlobalFF, sc.root, returnType, sc.subLinesCount, false, featureBuilder)
+								Node subOption[] = buildLines(subps, subps.nextNode, subGlobalFF, sc.root, returnType, sc.subLinesCount, linesRemaining, false, featureBuilder)
 
 								if (subOption != null)
 								{
@@ -1623,7 +1645,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 									//continue to populate the next line of code after the sub-scope
 									// - the use of globalFF here is really strange to work out: what it's saying is, if I'm in a sub-scope already, an we're in a fast-forward, do NOT mess with the last line of this sub-scope, because the "resume" point of a fast-forward is ALWAYS from the last line of the function (i.e. the return); nothing else is allowed to move -- because last-line-returns completely ignore globalFF, this only gets noticed if we're on the last line of a sub-scope, where we *don't* want to skip the option
-									Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, addReturn, featureBuilder)
+									Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, subGLCount, addReturn, featureBuilder)
 
 									if (childOptions != null) {
 										programs = new Node[](programs, childOptions)
@@ -1645,7 +1667,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						else
 						{
 							//continue to populate the next line of code
-							Node childOptions[] = buildLines(ps, fastForward, globalFF, options[i], returnType, continueLineCount, addReturn, featureBuilder)
+							Node childOptions[] = buildLines(ps, fastForward, globalFF, options[i], returnType, continueLineCount, linesRemaining, addReturn, featureBuilder)
 
 							if (childOptions != null) {
 								programs = new Node[](programs, childOptions)
@@ -1681,8 +1703,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					// NOTE: Measure final distance of feature vector here.
 					Node currentNode = options[i]
 					Operation lineInfo = currentNode.lineInfo
-					options[i].features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
-					bool programClosenessCheck = featureBuilder.programHasMinimumFeatures(currentNode.features, lineCount)//true//featureBuilder.isProgramSimilar(options[i].features)
+					options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
+					bool programClosenessCheck = true//featureBuilder.programHasMinimumFeatures(options[i].features, linesRemaining)//true//featureBuilder.isProgramSimilar(options[i].features)
 
 					// Replace this with a check to find if all features are included.
 					if (programClosenessCheck) {
@@ -1876,7 +1898,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		OptionSet Generator:getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
 			if (featureBuilder == null) out.println("FeatureBuilder is null in getOptions")
-			PermutationSet ps = new PermutationSet(lineCount, lineCount, 0, maxOptions)
+			PermutationSet ps = new PermutationSet(lineCount, lineCount, maxOptions)
 
 			testFunction = fp
 
@@ -1890,7 +1912,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			Node root = new Node(null, ins)
 
 			// NOTE: pass feature vector here:
-			Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, true, featureBuilder)
+			Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, lineCount, true, featureBuilder)
 
 			OptionSet result = new OptionSet(options, ps.nextNode)
 

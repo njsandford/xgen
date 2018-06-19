@@ -35,7 +35,7 @@ interface Generator {
 
 	OptionSet getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 
-	Option getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource)
+	Option getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource, FeatureBuilder featureBuilder)
 
 	//int countOptions(FunctionPrototype fp, int lineCount)
 	//int getIndexOf(FunctionPrototype fp, int lineCount, Option o)

@@ -1400,7 +1400,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 		// NOTE: convert operations to nodes -- modify this! could a node include an operation?
 		// Maybe this is where the feature builder should be called to build features for each node? (instead of in buildLines)
-		Node[] buildNextLine(Node n, int remainingLines, bool outerScope) // , FeatureVector features) // Add the featureVector to compare current program to.
+		Node[] buildNextLine(Node n, int remainingLines, bool outerScope, FeatureBuilder featureBuilder) // , FeatureVector features) // Add the featureVector to compare current program to.
 		{
 			Node result[]
 
@@ -1435,7 +1435,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				newNode.lineInfo = ops[j] // Pass the current operation to the new node
 				//lineInfo.line = newLine // Added this to be used by feature builder.
 				//lineInfo.lineType = newlt // Added lineType var for feature builder
-				/* newNode.features = clone n.features */
+				newNode.features = featureBuilder.updateFeatureVector(newNode.features, ops[j].lineType, ops[j].line, ops[j].lineType, ops[j].decType, ops[j].asmtType)
 
 				if (ops[j].newVar == null) {
 					newNode.declarationsComplete = true
@@ -1524,11 +1524,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			//int linesRemaining = ps.totalLines - lineCount // NOT lines remaining - more like lines used?
 			//out.println("totalLines: $(iu.intToString(ps.totalLines)), lineCount: $(iu.intToString(lineCount)), linesRemaining: $(iu.intToString(linesRemaining))")
 
+			/* PIFixed previousFeatures = clone start.features */
+
 			int linesRemaining = globalLineCount - 1
 
 			if (lineCount > 0)
 			{
-				Node options[] = buildNextLine(start, lineCount, addReturn)
+				Node options[] = buildNextLine(start, lineCount, addReturn, featureBuilder)
 				//Node options[] = buildTree_summary(start, lineCount)
 				int offset = 0
 
@@ -1554,17 +1556,23 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					//  - Maybe should first check if declarations are finished, and if so, do a reachability test?
 					// 	-
 					/* Node currentNode = options[i] */
-					Operation lineInfo = clone options[i].lineInfo
-					PIFixed newFeatures = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
-					/* options[i].features = featureBuilder.updateFeatureVector(options[i].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
+					Operation lineInfo = options[i].lineInfo
+
+					/* PIFixed previousFeatures = clone start.features */
+
+					/* PIFixed newFeatures = featureBuilder.updateFeatureVector(options[i].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
+					/* options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
 
 					/* bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, linesRemaining)
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, linesRemaining) */
 
-					bool rejectBranch = featureBuilder.rejectBranch(newFeatures, options[i].declarationsComplete, linesRemaining)
+					bool rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
 
-					if (rejectBranch)// (!rejectEarly && programIsReachable)
+					if (!rejectBranch)// (!rejectEarly && programIsReachable)
 					{
+						/* options[i].features = previousFeatures
+						start.features = previousFeatures */
+
 						testsFailed ++
 
 						/* if (testsFailed % 100 == 0 && addReturn)
@@ -1679,6 +1687,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 						fastForward = null
 					}
+					else {
+						options[i].features = null
+						/* start.features = previousFeatures */
+					}
 				}
 			}
 			else if (addReturn)
@@ -1704,7 +1716,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					Node currentNode = options[i]
 					Operation lineInfo = currentNode.lineInfo
 					options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
-					bool programClosenessCheck = true//featureBuilder.programHasMinimumFeatures(options[i].features, linesRemaining)//true//featureBuilder.isProgramSimilar(options[i].features)
+					bool programClosenessCheck = featureBuilder.programHasMinimumFeatures(options[i].features, linesRemaining)//true//featureBuilder.isProgramSimilar(options[i].features)
 
 					// Replace this with a check to find if all features are included.
 					if (programClosenessCheck) {
@@ -1746,11 +1758,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return programs
 		}
 
-		Node buildRandomLine(Node start, char returnType[], int lineCount, bool addReturn, RandomInt rgen)
+		Node buildRandomLine(Node start, char returnType[], int lineCount, bool addReturn, RandomInt rgen, FeatureBuilder featureBuilder)
 		{
 			if (lineCount > 0)
 			{
-				Node options[] = buildNextLine(start, lineCount, addReturn)
+				Node options[] = buildNextLine(start, lineCount, addReturn, featureBuilder)
 
 				if (options == null)
 				return null
@@ -1770,15 +1782,15 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 					continueLineCount -= sc.subLinesCount
 
-					Node subOption = buildRandomLine(sc.root, returnType, sc.subLinesCount, false, rgen)
+					Node subOption = buildRandomLine(sc.root, returnType, sc.subLinesCount, false, rgen, featureBuilder)
 
 					nxt.lines = new int[](nxt.lines, subOption.lines)
 
-					return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen)
+					return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen, featureBuilder)
 				}
 				else
 				{
-					return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen)
+					return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen, featureBuilder)
 				}
 			}
 			else if (addReturn)
@@ -1919,7 +1931,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return result
 		}
 
-		Option Generator:getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource)
+		Option Generator:getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource, FeatureBuilder featureBuilder)
 		{
 			int ins[] = null
 
@@ -1934,7 +1946,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 			while (choice == null)
 			{
-				choice = buildRandomLine(clone root, fp.returnType, lineCount, true, randomSource)
+				choice = buildRandomLine(clone root, fp.returnType, lineCount, true, randomSource, featureBuilder)
 			}
 
 			return choice

@@ -23,7 +23,7 @@ component provides CodeSearch:GlobalRandom requires io.Output out, data.IntUtil 
 			//NOTE: this is a surprisingly slow way to get an option, because the first option tends to have the most permutations (most variables declared)
 			// - we could either just assume that "all 0's" works (but this requires the first param to be of the function's return type), or go random instead?
 
-			Option q = generator.getRandomOption(functionList[i].prototype, functionList[i].lineCount, randomInt)
+			Option q = generator.getRandomOption(functionList[i].prototype, functionList[i].lineCount, randomInt, featureBuilder)
 			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, q))
 
 			//OptionSet ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, 1, null, featureBuilder)

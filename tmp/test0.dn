@@ -2,9 +2,8 @@ component provides Int_IntArray_Int_Function
 {
 int Int_IntArray_Int_Function:function(int locv_0[],int locv_1)
 {
-int locv_2
-dec locv_3
-dec locv_4
+bool locv_2
+locv_2 = true
 return locv_1
 }
 }

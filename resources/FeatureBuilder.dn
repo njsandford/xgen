@@ -62,6 +62,8 @@ data AssignmentTypes {
   int totalDataToFunc // 34
   int totalDataToGOFunc // 35
   int totalDataToLOFunc // 36
+
+  char literalValue[]
 }
 
 data OperatorTypes {
@@ -138,7 +140,7 @@ interface FeatureBuilder {
 
   /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
   /* FeatureVector updateFeatureVector(FeatureVector current, String newLine) */
-  PIFixed updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType, int asmtType) // Pass the new node, which contains the feature vector, the new line, and all information for the operation
+  PIFixed updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[]) // Pass the new node, which contains the feature vector, the new line, and all information for the operation
 
   bool rejectBranch(PIFixed current, bool declarationsComplete, int linesRemaining)
 

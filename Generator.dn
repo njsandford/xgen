@@ -61,6 +61,7 @@ data Operation {
 	int subLinesCount
 	int decType // declaration type, integer between 1 and 6 representing [int, dec, bool, char, void, Data]
 	int asmtType // assignment type, integer between 1 and 24
+	char rhsAssign[] // holds the string value of the rhs of an assignment
 }
 
 // NOTE:
@@ -1247,7 +1248,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				for (int j = 0; j < options.arrayLength; j++)
 				{
 					//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line.string)", 2))
-					result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType))
+					// if a literal assignment, pass the literal value to the operation.
+					if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
+						result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType, options[j].line))
+					}
+					else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType))
 				}
 			}
 
@@ -1271,7 +1276,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							if (typesMatch(getType("int").type, types[ins[k]].type))
 							{
 								//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)", 2))
-								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType)))
+								if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
+									result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType), options[j].line))
+								}
+								else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType)))
 							}
 						}
 					}
@@ -1293,7 +1301,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						for (int j = 0; j < options.arrayLength; j++)
 						{
 							//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)", 2))
-							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType)))
+							if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
+								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType), options[j].line))
+							}
+							else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType)))
 						}
 					}
 				}
@@ -1578,20 +1589,20 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					/* bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, linesRemaining)
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, linesRemaining) */
 
-					PIFixed newFeatures = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
+					PIFixed newFeatures = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
 					options[i].features = featureBuilder.copyFeatures(newFeatures)
 
 					bool rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
 
-					if (!rejectBranch)// (!rejectEarly && programIsReachable)
+					/* if (rejectBranch)// (!rejectEarly && programIsReachable)
 					{
-						/* options[i].features = previousFeatures
-						start.features = previousFeatures */
+						//options[i].features = previousFeatures
+						//start.features = previousFeatures
 
 						testsFailed ++
 
-						/* if (testsFailed % 100 == 0 && addReturn)
-						{ */
+						if (testsFailed % 100 == 0 && addReturn)
+						{
 							//out.println("ACL: $(iu.intToString(start.lines.arrayLength))")
 							int currentLines[] = options[i].lines
 							currentLines = new int[](start.lines, set)
@@ -1611,8 +1622,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 								if (lines[j].string == options[i].lineInfo.line) out.println(" << --")
 								else out.println("")
 						  }
-						/* } */
-					}
+						}
+					} */
 
 					/* if (!rejectEarly && programIsReachable) { */
 					if (!rejectBranch)//(!rejectEarly && programIsReachable)

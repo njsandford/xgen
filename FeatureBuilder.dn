@@ -46,9 +46,13 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   }
 
   /* update the assignment type counts */
-  AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType) {
+  AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType, char rhsAssign[]) {
     AssignmentTypes ats = asmtTypes
-    if (asmtType == 1) ats.totalVarToLit += 1
+    if (asmtType == 1)
+    {
+      ats.totalVarToLit += 1
+      ats.literalValue = rhsAssign
+    }
     else if (asmtType == 2) ats.totalVarToVar += 1
     else if (asmtType == 3) ats.totalVarToInd += 1
     else if (asmtType == 4) ats.totalVarToField += 1
@@ -61,7 +65,11 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     else if (asmtType == 11) ats.totalVarToGOFunc += 1
     else if (asmtType == 12) ats.totalVarToLOFunc += 1
     // LHS = variable indices
-    else if (asmtType == 13) ats.totalIndToLit += 1
+    else if (asmtType == 13)
+    {
+      ats.totalIndToLit += 1
+      ats.literalValue = rhsAssign
+    }
     else if (asmtType == 14) ats.totalIndToVar += 1
     else if (asmtType == 15) ats.totalIndToInd += 1
     else if (asmtType == 16) ats.totalIndToField += 1
@@ -74,7 +82,11 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     else if (asmtType == 23) ats.totalIndToGOFunc += 1
     else if (asmtType == 24) ats.totalIndToLOFunc += 1
     // LHS = data
-    else if (asmtType == 25) ats.totalDataToLit += 1
+    else if (asmtType == 25)
+    {
+      ats.totalDataToLit += 1
+      ats.literalValue = rhsAssign
+    }
     else if (asmtType == 26) ats.totalDataToVar += 1
     else if (asmtType == 27) ats.totalDataToInd += 1
     else if (asmtType == 28) ats.totalDataToField += 1
@@ -86,13 +98,13 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     else if (asmtType == 34) ats.totalDataToFunc += 1
     else if (asmtType == 35) ats.totalDataToGOFunc += 1
     else if (asmtType == 36) ats.totalDataToLOFunc += 1
-
+    else ats.literalValue = null
     return ats
   }
 
   // NOTE: If function overloading is possible, have separate functions for each type of FeatureVector (when more than PIFixed is available!)
   /* FeatureVector doUpdate(Node currentNode) { */
-  PIFixed doUpdate(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType) {
+  PIFixed doUpdate(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[]) {
     //Node node = clone currentNode
     PIFixed update = clone existingFV //node.features
     /* update.nonBlankLines += 1 */
@@ -139,7 +151,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     else if (lineType == 2) {
       // 2 = assignment - we could increase the number of assignment types
       update.totalAssignments += 1
-      update.asmtTypes = updateAssignmentTypes(update.asmtTypes, asmtType)
+      update.asmtTypes = updateAssignmentTypes(update.asmtTypes, asmtType, rhsAssign)
     }
     else if (lineType == 3) {
       // 3 = if statement
@@ -179,12 +191,12 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   // get a new PIFixed feature vector for the current feature vector (of a node) plus the new line.
   // May be easier/make more sense to just pass a Node and get the feature vector from there.
   /* PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) { */
-  PIFixed FeatureBuilder:updateFeatureVector(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType) { //}, String inputVarType) {
+  PIFixed FeatureBuilder:updateFeatureVector(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[]) { //}, String inputVarType) {
     // Node node = clone newNode
     //FeatureVector current = node.features
     PIFixed features = getNewFeatureVector()
     if (existingFV != null) features = copyFeatures(existingFV)
-    printFeatures(features)
+    /* printFeatures(features) */
 
     features.totalLines += 1
 
@@ -196,9 +208,9 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     }
     else { //(features.totalLines > 0) {
       // Non blank line
-      features = doUpdate(features, lineType, newLine, subLinesCount, decType, asmtType)
+      features = doUpdate(features, lineType, newLine, subLinesCount, decType, asmtType, rhsAssign)
     }
-    printFeatures(features)
+    /* printFeatures(features) */
 
     return features
   }
@@ -433,6 +445,9 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
         return false
       }
       if (providedFeatures.asmtTypes.totalVarToLOFunc > current.asmtTypes.totalVarToLOFunc) {
+        return false
+      }
+      if (providedFeatures.asmtTypes.literalValue != null && current.asmtTypes.literalValue != providedFeatures.asmtTypes.literalValue) {
         return false
       }
     }

@@ -19,7 +19,7 @@ data Node extends Option
 	bool declarationsComplete // Very useful for feature building: can do a check that enough/not too many variables exist to make the FV reachable.
 	bool blankLines
 	Operation lineInfo // Stores information about the current line for this node
-	FeatureVector features
+	PIFixed features
 }
 
 data PermutationSet {
@@ -1428,14 +1428,24 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					newss = n.subLines
 				}
 
-				Node newNode = clone n
+				/* Node newNode = clone n */
+				Node newNode = new Node()
+				newNode.lines = n.lines
+				newNode.declarationsComplete = n.declarationsComplete
+				newNode.blankLines = n.blankLines
 				newNode.inScope = newins
 				newNode.subLines = newss
-				//Operation lineInfo = newNode.lineInfo
 				newNode.lineInfo = ops[j] // Pass the current operation to the new node
 				//lineInfo.line = newLine // Added this to be used by feature builder.
 				//lineInfo.lineType = newlt // Added lineType var for feature builder
-				newNode.features = featureBuilder.updateFeatureVector(newNode.features, ops[j].lineType, ops[j].line, ops[j].lineType, ops[j].decType, ops[j].asmtType)
+				/* newNode.features = clone n.features//featureBuilder.updateFeatureVector(newNode.features, ops[j].lineType, ops[j].line, ops[j].lineType, ops[j].decType, ops[j].asmtType) */
+				/* newNode.features = clone n.features
+				if (n.features != null) {
+					newNode.features.varTypes = clone n.features.varTypes
+					newNode.features.asmtTypes = clone n.features.asmtTypes
+				} */
+				newNode.features = featureBuilder.copyFeatures(n.features)
+				/* newNode.features.remainingLinesInBlock = clone n.features.remainingLinesInBlock */
 
 				if (ops[j].newVar == null) {
 					newNode.declarationsComplete = true
@@ -1524,7 +1534,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			//int linesRemaining = ps.totalLines - lineCount // NOT lines remaining - more like lines used?
 			//out.println("totalLines: $(iu.intToString(ps.totalLines)), lineCount: $(iu.intToString(lineCount)), linesRemaining: $(iu.intToString(linesRemaining))")
 
-			/* PIFixed previousFeatures = clone start.features */
+			/* Node previousNode = clone start */
 
 			int linesRemaining = globalLineCount - 1
 
@@ -1541,6 +1551,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					offset = fastForward.lines[ps.totalLines - lineCount]
 				}
 
+				/* PIFixed previousFeatures = clone start.features */
 				for (int i = 0; i < options.arrayLength; i++)
 				{
 					int set = offset+i
@@ -1558,13 +1569,17 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					/* Node currentNode = options[i] */
 					Operation lineInfo = options[i].lineInfo
 
-					/* PIFixed previousFeatures = clone start.features */
+					/* PIFixed previousFeatures = options[i].features */
+					/* options[i].features = featureBuilder.getNewFeatureVector() */
 
 					/* PIFixed newFeatures = featureBuilder.updateFeatureVector(options[i].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
-					/* options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
+					/* options[i].features = featureBuilder.updateFeatureVector(previousFeatures, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
 
 					/* bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, linesRemaining)
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, linesRemaining) */
+
+					PIFixed newFeatures = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
+					options[i].features = featureBuilder.copyFeatures(newFeatures)
 
 					bool rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
 
@@ -1578,7 +1593,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						/* if (testsFailed % 100 == 0 && addReturn)
 						{ */
 							//out.println("ACL: $(iu.intToString(start.lines.arrayLength))")
-							options[i].lines = new int[](start.lines, set)
+							int currentLines[] = options[i].lines
+							currentLines = new int[](start.lines, set)
 							out.println("line count $(iu.intToString(options[i].arrayLength))/$(iu.intToString(lineCount)), globalLineCount $(iu.intToString(globalLineCount))")
 							out.println("decType $(iu.intToString(options[i].lineInfo.decType))")
 							out.println("asmtType $(iu.intToString(options[i].lineInfo.asmtType))")
@@ -1586,7 +1602,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							//(+2 to skip function header)
 							//int postIndex = (options[i].arrayLength) + 2
 							for (int j = 0; j < lineCount; j++) {
-								options[i].lines = new int[](options[i].lines, 0)
+								currentLines = new int[](currentLines, 0)
 							}
 							String lines[] = decodeOption(testFunction, options[i])
 							out.println("")
@@ -1674,8 +1690,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						}
 						else
 						{
+							Node optionN = clone options[i]
+							optionN.features = featureBuilder.copyFeatures(options[i].features)
+							/* Node optionN = clone options[i] */
 							//continue to populate the next line of code
-							Node childOptions[] = buildLines(ps, fastForward, globalFF, options[i], returnType, continueLineCount, linesRemaining, addReturn, featureBuilder)
+							Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, linesRemaining, addReturn, featureBuilder)
 
 							if (childOptions != null) {
 								programs = new Node[](programs, childOptions)
@@ -1687,11 +1706,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 						fastForward = null
 					}
-					else {
-						options[i].features = null
+					/* else { */
+						/* options[i].features = previousFeatures */
 						/* start.features = previousFeatures */
-					}
+					/* } */
 				}
+				/* options[i].features = previousFeatures */
+				/* start.features = previousFeatures */
 			}
 			else if (addReturn)
 			{
@@ -1715,8 +1736,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					// NOTE: Measure final distance of feature vector here.
 					Node currentNode = options[i]
 					Operation lineInfo = currentNode.lineInfo
-					options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType)
-					bool programClosenessCheck = featureBuilder.programHasMinimumFeatures(options[i].features, linesRemaining)//true//featureBuilder.isProgramSimilar(options[i].features)
+					// Shouldn't need to update again here, just using existing features, return doens't add anything
+					/* options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
+					bool programClosenessCheck = true//featureBuilder.programHasMinimumFeatures(options[i].features, linesRemaining)//true//featureBuilder.isProgramSimilar(options[i].features)
 
 					// Replace this with a check to find if all features are included.
 					if (programClosenessCheck) {

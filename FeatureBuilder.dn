@@ -183,7 +183,8 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     // Node node = clone newNode
     //FeatureVector current = node.features
     PIFixed features = getNewFeatureVector()
-    if (existingFV != null) features = clone existingFV
+    if (existingFV != null) features = copyFeatures(existingFV)
+    printFeatures(features)
 
     features.totalLines += 1
 
@@ -530,6 +531,17 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     output.println("current objects: $(iu.intToString(currentFeatures.varTypes.totalObjs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjs))")
     output.println("current object arrays: $(iu.intToString(currentFeatures.varTypes.totalObjArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjArrs))")
     output.println("current function arrays: $(iu.intToString(currentFeatures.varTypes.totalFuncArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalFuncArrs))")
+  }
+
+  PIFixed FeatureBuilder:copyFeatures(PIFixed features) {
+    if (features == null) return null
+    VariableTypes varTypesCopy = clone features.varTypes
+    AssignmentTypes asmtTypesCopy = clone features.asmtTypes
+    Stack rlibCopy = features.remainingLinesInBlock//.clone()
+    PIFixed copy = new PIFixed(/*totalLines*/features.totalLines, /*blankLines*/features.blankLines, /*totalVars*/features.totalVars, /*varTypes*/varTypesCopy, /*nonInputVars*/features.nonInputVars, /*totalAssignments*/features.totalAssignments, /*asmtTypes*/asmtTypesCopy, /*totalWhiles*/features.totalWhiles, /*totalIfs*/features.totalIfs, /*totalFunctionCalls*/features.totalFunctionCalls, /*totalReturns*/features.totalReturns, /*aveLoopLength*/features.aveLoopLength,
+			/*aveWhileLength*/features.aveWhileLength, /*highestNestingLevel*/features.highestNestingLevel, /*remainingLinesInBlock*/rlibCopy, /*totalLoopLength*/features.totalLoopLength, /*totalWhileLength*/features.totalWhileLength, /*minimumLinesToComplete*/features.minimumLinesToComplete)
+
+    return copy
   }
 
 }

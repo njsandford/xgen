@@ -152,4 +152,6 @@ interface FeatureBuilder {
 
   bool hasMinLinesToCompleteFeatures(PIFixed current, int linesRemaining)
 
+  PIFixed copyFeatures(PIFixed features)
+
 }

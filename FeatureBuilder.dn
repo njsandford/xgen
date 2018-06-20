@@ -358,38 +358,45 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     }
   }
 
+  bool correctDeclarations(PIFixed current) {
+    if (providedFeatures.totalVars != current.totalVars) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalInts != current.varTypes.totalInts) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalDecs != current.varTypes.totalDecs) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalBools != current.varTypes.totalBools) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalChars != current.varTypes.totalChars) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalDatas != current.varTypes.totalDatas) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalObjs != current.varTypes.totalObjs) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalFuncArrs != current.varTypes.totalFuncArrs) {
+      return false
+    }
+    return true
+  }
+
   // Decide if the provided features are reachable from the current FV.
   // NOTE could update this to include the order of assignments made, eg. ints before bools.
   bool FeatureBuilder:areFeaturesReachable(PIFixed current, bool declarationsComplete, int linesRemaining) {
     if (providedFeatures == null) output.println("providedFeatures is null in areFeaturesReachable in FeatureBuilder")
     if (current == null) output.println("current FV is null in areFeaturesReachable in FeatureBuilder")
-    if (declarationsComplete) {
-      /* if (providedFeatures.totalAssignments > current.totalAssignments) { */
-      if (providedFeatures.totalVars > current.totalVars) {
-        return false
-      }
-      if (providedFeatures.varTypes.totalInts > current.varTypes.totalInts) {
-        return false
-      }
-      if (providedFeatures.varTypes.totalDecs > current.varTypes.totalDecs) {
-        return false
-      }
-      if (providedFeatures.varTypes.totalBools > current.varTypes.totalBools) {
-        return false
-      }
-      if (providedFeatures.varTypes.totalChars > current.varTypes.totalChars) {
-        return false
-      }
-      if (providedFeatures.varTypes.totalDatas > current.varTypes.totalDatas) {
-        return false
-      }
-      if (providedFeatures.varTypes.totalObjs > current.varTypes.totalObjs) {
-        return false
-      }
-      if (providedFeatures.varTypes.totalFuncArrs > current.varTypes.totalFuncArrs) {
-        return false
-      }
-      /* if (providedFeatures.totalAssignments > current.totalAssignments) {
+    if (declarationsComplete && !correctDeclarations(current)) {
+      // If declarations are finished, no more can be done, so check if all are correct.
+      return false
+    }
+    if (linesRemaining == 0) {
+      if (providedFeatures.totalAssignments > current.totalAssignments) {
         return false
       }
       if (providedFeatures.asmtTypes.totalVarToLit > current.asmtTypes.totalVarToLit) {
@@ -427,7 +434,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       }
       if (providedFeatures.asmtTypes.totalVarToLOFunc > current.asmtTypes.totalVarToLOFunc) {
         return false
-      } */
+      }
     }
     return true
   }

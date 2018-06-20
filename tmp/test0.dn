@@ -1,10 +1,10 @@
-component provides Int_IntArray_Int_Function
+component provides Int_IntArray_Int_Function 
 {
 int Int_IntArray_Int_Function:function(int locv_0[],int locv_1)
 {
 int locv_2
-int locv_3
+dec locv_3
 dec locv_4
-return locv_3
+return locv_1
 }
 }

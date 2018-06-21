@@ -3,7 +3,7 @@ uses FunctionData
 uses data.adt.Stack
 
 data FeatureVector {
-  int totalLines
+  bool isValid
 }
 
 data VariableTypes {
@@ -92,6 +92,7 @@ data OperatorTypes {
 // Position-independent features, fixed number of features
 data PIFixed extends FeatureVector {
   /* int nonBlankLines */
+  int totalLines
   int blankLines
   int totalVars
   VariableTypes varTypes

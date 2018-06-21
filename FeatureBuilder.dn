@@ -47,7 +47,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
 
   /* update the assignment type counts */
   AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType, char rhsAssign[]) {
-    AssignmentTypes ats = asmtTypes
+    AssignmentTypes ats = clone asmtTypes
     if (asmtType == 1)
     {
       ats.totalVarToLit += 1
@@ -98,7 +98,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     else if (asmtType == 34) ats.totalDataToFunc += 1
     else if (asmtType == 35) ats.totalDataToGOFunc += 1
     else if (asmtType == 36) ats.totalDataToLOFunc += 1
-    else ats.literalValue = null
+    else ats.literalValue = ""
     return ats
   }
 
@@ -194,6 +194,8 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   PIFixed FeatureBuilder:updateFeatureVector(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[]) { //}, String inputVarType) {
     // Node node = clone newNode
     //FeatureVector current = node.features
+    output.println("rhsAssign: $(rhsAssign), provided: $(providedFeatures.asmtTypes.literalValue)")
+
     PIFixed features = getNewFeatureVector()
     if (existingFV != null) features = copyFeatures(existingFV)
     /* printFeatures(features) */
@@ -261,67 +263,53 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     // NOTE: complete!
     // Check if too many variables have been declared
     if (currentFeatures.totalVars > providedFeatures.totalVars) {
-      output.println("current vars: $(iu.intToString(currentFeatures.totalVars)), provided: $(iu.intToString(providedFeatures.totalVars))")
       return true
     }
     if (currentFeatures.varTypes.totalInts > providedFeatures.varTypes.totalInts) {
-      output.println("current ints: $(iu.intToString(currentFeatures.varTypes.totalInts)), provided: $(iu.intToString(providedFeatures.varTypes.totalInts))")
       return true
     }
     if (currentFeatures.varTypes.totalDecs > providedFeatures.varTypes.totalDecs) {
-      output.println("current decs: $(iu.intToString(currentFeatures.varTypes.totalDecs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDecs))")
       return true
     }
     if (currentFeatures.varTypes.totalBools > providedFeatures.varTypes.totalBools) {
-      output.println("current bools: $(iu.intToString(currentFeatures.varTypes.totalBools)), provided: $(iu.intToString(providedFeatures.varTypes.totalBools))")
       return true
     }
     if (currentFeatures.varTypes.totalChars > providedFeatures.varTypes.totalChars) {
-      output.println("current chars: $(iu.intToString(currentFeatures.varTypes.totalChars)), provided: $(iu.intToString(providedFeatures.varTypes.totalChars))")
       return true
     }
     if (currentFeatures.varTypes.totalDatas > providedFeatures.varTypes.totalDatas) {
-      output.println("current datas: $(iu.intToString(currentFeatures.varTypes.totalDatas)), provided: $(iu.intToString(providedFeatures.varTypes.totalDatas))")
       return true
     }
     if (currentFeatures.varTypes.totalIntArrs > providedFeatures.varTypes.totalIntArrs) {
-      output.println("current int arrays: $(iu.intToString(currentFeatures.varTypes.totalIntArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalIntArrs))")
       return true
     }
     if (currentFeatures.varTypes.totalDecArrs > providedFeatures.varTypes.totalDecArrs) {
-      output.println("current dec arrays: $(iu.intToString(currentFeatures.varTypes.totalDecArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDecArrs))")
       return true
     }
     if (currentFeatures.varTypes.totalBoolArrs > providedFeatures.varTypes.totalBoolArrs) {
-      output.println("current bool arrays: $(iu.intToString(currentFeatures.varTypes.totalBoolArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalBoolArrs))")
       return true
     }
     if (currentFeatures.varTypes.totalCharArrs > providedFeatures.varTypes.totalCharArrs) {
-      output.println("current char arrays: $(iu.intToString(currentFeatures.varTypes.totalCharArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalCharArrs))")
       return true
     }
     if (currentFeatures.varTypes.totalDataArrs > providedFeatures.varTypes.totalDataArrs) {
-      output.println("current data arrays: $(iu.intToString(currentFeatures.varTypes.totalDataArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDataArrs))")
       return true
     }
     if (currentFeatures.varTypes.totalObjs > providedFeatures.varTypes.totalObjs) {
-      output.println("current objects: $(iu.intToString(currentFeatures.varTypes.totalObjs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjs))")
       return true
     }
     if (currentFeatures.varTypes.totalObjArrs > providedFeatures.varTypes.totalObjArrs) {
-      output.println("current object arrays: $(iu.intToString(currentFeatures.varTypes.totalObjArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjArrs))")
       return true
     }
     if (currentFeatures.varTypes.totalFuncArrs > providedFeatures.varTypes.totalFuncArrs) {
-      output.println("current function arrays: $(iu.intToString(currentFeatures.varTypes.totalFuncArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalFuncArrs))")
       return true
     }
     if (currentFeatures.totalAssignments > providedFeatures.totalAssignments) {
       return true
     }
     if (rejectAssignments(currentFeatures.asmtTypes, providedFeatures.asmtTypes)) {
-      rejectedBranches += 1
-      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+      /* rejectedBranches += 1
+      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))") */
       return true
     }
     if (currentFeatures.totalWhiles > providedFeatures.totalWhiles) {

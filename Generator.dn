@@ -1547,10 +1547,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 			/* Node previousNode = clone start */
 
-			int linesRemaining = globalLineCount - 1
+			/* int linesRemaining = globalLineCount - 1 */
 
 			if (lineCount > 0)
 			{
+				int linesRemaining = globalLineCount - 1
+
 				Node options[] = buildNextLine(start, lineCount, addReturn, featureBuilder)
 				//Node options[] = buildTree_summary(start, lineCount)
 				int offset = 0
@@ -1589,8 +1591,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					/* bool programIsReachable = featureBuilder.areFeaturesReachable(options[i].features, options[i].declarationsComplete, linesRemaining)
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, linesRemaining) */
 
-					PIFixed newFeatures = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
-					options[i].features = featureBuilder.copyFeatures(newFeatures)
+					//PIFixed newFeatures
+					options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
+					out.println("literal val: $(lineInfo.rhsAssign)")
+					/* options[i].features = featureBuilder.copyFeatures(newFeatures) */
 
 					bool rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
 
@@ -1749,10 +1753,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					Operation lineInfo = currentNode.lineInfo
 					// Shouldn't need to update again here, just using existing features, return doens't add anything
 					/* options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
-					bool programClosenessCheck = true//featureBuilder.programHasMinimumFeatures(options[i].features, linesRemaining)//true//featureBuilder.isProgramSimilar(options[i].features)
+					bool programClosenessCheck = featureBuilder.programHasMinimumFeatures(options[i].features, 0)//true//featureBuilder.isProgramSimilar(options[i].features)
 
 					// Replace this with a check to find if all features are included.
 					if (programClosenessCheck) {
+
 						options[i].lines = new int[](start.lines, set)
 						selection = new Node[](selection, options[i])
 

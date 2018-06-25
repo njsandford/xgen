@@ -98,7 +98,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     else if (asmtType == 34) ats.totalDataToFunc += 1
     else if (asmtType == 35) ats.totalDataToGOFunc += 1
     else if (asmtType == 36) ats.totalDataToLOFunc += 1
-    else ats.literalValue = ""
+    /* else ats.literalValue = "" */
     return ats
   }
 
@@ -194,7 +194,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   PIFixed FeatureBuilder:updateFeatureVector(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[]) { //}, String inputVarType) {
     // Node node = clone newNode
     //FeatureVector current = node.features
-    output.println("rhsAssign: $(rhsAssign), provided: $(providedFeatures.asmtTypes.literalValue)")
+    output.println("line: $(newLine), lineType: $(iu.intToString(lineType)), asmtType: $(iu.intToString(asmtType)), rhsAssign: $(rhsAssign), provided: $(providedFeatures.asmtTypes.literalValue)")
 
     PIFixed features = getNewFeatureVector()
     if (existingFV != null) features = copyFeatures(existingFV)
@@ -395,6 +395,9 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       // If declarations are finished, no more can be done, so check if all are correct.
       return false
     }
+    if (providedFeatures.asmtTypes.literalValue != null && (current.asmtTypes.literalValue != providedFeatures.asmtTypes.literalValue)) {
+      return false
+    }
     if (linesRemaining == 0) {
       if (providedFeatures.totalAssignments > current.totalAssignments) {
         return false
@@ -435,9 +438,6 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       if (providedFeatures.asmtTypes.totalVarToLOFunc > current.asmtTypes.totalVarToLOFunc) {
         return false
       }
-      if (providedFeatures.asmtTypes.literalValue != null && current.asmtTypes.literalValue != providedFeatures.asmtTypes.literalValue) {
-        return false
-      }
     }
     return true
   }
@@ -460,11 +460,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   }
 
   bool FeatureBuilder:programHasMinimumFeatures(PIFixed currentFeatures, int linesRemaining) {
-    if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
+    /* if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
     // If the features of the current node are similar enough to the provided feature vector, add it to tree.
     bool minFeatures = true
-    /* while (minFeatures == true) { // Save unneccasary computation if one of the features is not */
-    /* minFeatures = minFeatures && (providedFeatures.totalLines <= currentFeatures.totalLines) */
+    //minFeatures = minFeatures && (providedFeatures.totalLines <= currentFeatures.totalLines)
     minFeatures = minFeatures && (providedFeatures.blankLines <= currentFeatures.blankLines)
     minFeatures = minFeatures && (providedFeatures.totalVars <= currentFeatures.totalVars)
     minFeatures = minFeatures && (providedFeatures.varTypes.totalInts <= currentFeatures.varTypes.totalInts)
@@ -480,7 +479,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     minFeatures = minFeatures && (providedFeatures.varTypes.totalObjs <= currentFeatures.varTypes.totalObjs)
     minFeatures = minFeatures && (providedFeatures.varTypes.totalObjArrs <= currentFeatures.varTypes.totalObjArrs)
     minFeatures = minFeatures && (providedFeatures.varTypes.totalFuncArrs <= currentFeatures.varTypes.totalFuncArrs)
-    /* minFeatures = minFeatures && (providedFeatures.nonInputVars <= currentFeatures.nonInputVars) */
+    //minFeatures = minFeatures && (providedFeatures.nonInputVars <= currentFeatures.nonInputVars)
     minFeatures = minFeatures && (providedFeatures.totalAssignments <= currentFeatures.totalAssignments)
     minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToLit <= currentFeatures.asmtTypes.totalVarToLit) && (providedFeatures.asmtTypes.totalIndToLit <= currentFeatures.asmtTypes.totalIndToLit) && (providedFeatures.asmtTypes.totalDataToLit <= currentFeatures.asmtTypes.totalDataToLit)
     minFeatures = minFeatures && (providedFeatures.asmtTypes.totalVarToVar <= currentFeatures.asmtTypes.totalVarToVar) && (providedFeatures.asmtTypes.totalIndToVar <= currentFeatures.asmtTypes.totalIndToVar) && (providedFeatures.asmtTypes.totalDataToVar <= currentFeatures.asmtTypes.totalDataToVar)
@@ -497,21 +496,21 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     minFeatures = minFeatures && (providedFeatures.totalWhiles <= currentFeatures.totalWhiles)
     minFeatures = minFeatures && (providedFeatures.totalIfs <= currentFeatures.totalIfs)
     minFeatures = minFeatures && (providedFeatures.totalFunctionCalls <= currentFeatures.totalFunctionCalls)
-    /* totalDistance = getAbsValue(minFeatures && (providedFeatures.totalFunctionCalls - currentFeatures.totalFunctionCalls) */
+    //totalDistance = getAbsValue(minFeatures && (providedFeatures.totalFunctionCalls - currentFeatures.totalFunctionCalls)
     // These features are probably not very useful...
-    /* minFeatures = minFeatures && (providedFeatures.aveLoopLength <= currentFeatures.aveLoopLength)
-    minFeatures = minFeatures && (providedFeatures.aveWhileLength <= currentFeatures.aveWhileLength) */
+    //minFeatures = minFeatures && (providedFeatures.aveLoopLength <= currentFeatures.aveLoopLength)
+    //minFeatures = minFeatures && (providedFeatures.aveWhileLength <= currentFeatures.aveWhileLength)
     minFeatures = minFeatures && (providedFeatures.highestNestingLevel <= currentFeatures.highestNestingLevel)
-    if (minFeatures) {
+    if (minFeatures) { */
       acceptedPrograms += 1
       output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return true
-    }
+    /* }
     else {
       rejectedPrograms += 1
       output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return false
-    }
+    } */
   }
 
   String[] getLineComponents(char line[]) {
@@ -547,8 +546,9 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     if (features == null) return null
     VariableTypes varTypesCopy = clone features.varTypes
     AssignmentTypes asmtTypesCopy = clone features.asmtTypes
+    /* asmtTypesCopy.literalValue = "5" */
     Stack rlibCopy = features.remainingLinesInBlock//.clone()
-    PIFixed copy = new PIFixed(/*totalLines*/features.totalLines, /*blankLines*/features.blankLines, /*totalVars*/features.totalVars, /*varTypes*/varTypesCopy, /*nonInputVars*/features.nonInputVars, /*totalAssignments*/features.totalAssignments, /*asmtTypes*/asmtTypesCopy, /*totalWhiles*/features.totalWhiles, /*totalIfs*/features.totalIfs, /*totalFunctionCalls*/features.totalFunctionCalls, /*totalReturns*/features.totalReturns, /*aveLoopLength*/features.aveLoopLength,
+    PIFixed copy = new PIFixed(features.isValid, /*totalLines*/features.totalLines, /*blankLines*/features.blankLines, /*totalVars*/features.totalVars, /*varTypes*/varTypesCopy, /*nonInputVars*/features.nonInputVars, /*totalAssignments*/features.totalAssignments, /*asmtTypes*/asmtTypesCopy, /*totalWhiles*/features.totalWhiles, /*totalIfs*/features.totalIfs, /*totalFunctionCalls*/features.totalFunctionCalls, /*totalReturns*/features.totalReturns, /*aveLoopLength*/features.aveLoopLength,
 			/*aveWhileLength*/features.aveWhileLength, /*highestNestingLevel*/features.highestNestingLevel, /*remainingLinesInBlock*/rlibCopy, /*totalLoopLength*/features.totalLoopLength, /*totalWhileLength*/features.totalWhileLength, /*minimumLinesToComplete*/features.minimumLinesToComplete)
 
     return copy

@@ -2,8 +2,8 @@ component provides Int_IntArray_Int_Function
 {
 int Int_IntArray_Int_Function:function(int locv_0[],int locv_1)
 {
-locv_1 = 0
-locv_1 = 1
+locv_1 = 5
+locv_1 = 5
 return locv_1
 }
 }

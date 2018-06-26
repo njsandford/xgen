@@ -20,6 +20,7 @@ data Node extends Option
 	bool blankLines
 	Operation lineInfo // Stores information about the current line for this node
 	PIFixed features
+	bool firstPostDec
 }
 
 data PermutationSet {
@@ -1444,6 +1445,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				newNode.lines = n.lines
 				newNode.declarationsComplete = n.declarationsComplete
 				newNode.blankLines = n.blankLines
+				newNode.firstPostDec = false
 				newNode.inScope = newins
 				newNode.subLines = newss
 				newNode.lineInfo = ops[j] // Pass the current operation to the new node
@@ -1460,6 +1462,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 				if (ops[j].newVar == null) {
 					newNode.declarationsComplete = true
+					if (n.declarationsComplete == false) {
+						newNode.firstPostDec = true // Flag this as the first option after the declarations have been completed - final place to check declarations.					}
 				}
 				if (ops[j].line == null) {
 					newNode.blankLines = true // this could also be a count of all blank lines, where a value > 0 is equivalent to 'true'.
@@ -1596,7 +1600,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					out.println("literal val: $(lineInfo.rhsAssign)")
 					/* options[i].features = featureBuilder.copyFeatures(newFeatures) */
 
-					bool rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
+					bool rejectBranch = false
+					if (options[i].features != null) {
+						rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
+					}
+					else rejectBranch = true
 
 					/* if (rejectBranch)// (!rejectEarly && programIsReachable)
 					{

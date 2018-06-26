@@ -125,27 +125,112 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     if (lineType == 0) {
       // 0 = local variable call
       update.totalFunctionCalls += 1
+      if (providedFeatures.totalFunctionCalls < update.totalFunctionCalls) update.isValid = false
     }
     else if (lineType == 1) {
       // 1 = declaration
       update.totalVars += 1
+      if (providedFeatures.totalVars < update.totalVars) {
+        update.isValid = false
+        return null
+      }
+      // OR if declarations complete, are provided total vars != current total vars, is valid = false
+      // NOTE: declatations complete check must be done elsewhere, preferably on the first line after the last declaration only.
       /* if (tokens[0] == inputVarType) {
         update.nonInputVars += 1
       } */
       VariableTypes vts = update.varTypes
-      if (decType == 1) vts.totalInts += 1
-      else if (decType == 2) vts.totalDecs += 1
-      else if (decType == 3) vts.totalChars += 1
-      else if (decType == 4) vts.totalBools += 1
-      else if (decType == 5) vts.totalDatas += 1
-      else if (decType == 6) vts.totalIntArrs += 1
-      else if (decType == 7) vts.totalDecArrs += 1
-      else if (decType == 8) vts.totalCharArrs += 1
-      else if (decType == 9) vts.totalBoolArrs += 1
-      else if (decType == 10) vts.totalDataArrs += 1
-      else if (decType == 11) vts.totalObjs += 1
-      else if (decType == 12) vts.totalObjArrs += 1
-      else if (decType == 13) vts.totalFuncArrs += 1
+      if (decType == 1) {
+        vts.totalInts += 1
+        if (providedFeatures.varTypes.totalInts < vts.totalInts) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 2) {
+        vts.totalDecs += 1
+        if (providedFeatures.varTypes.totalDecs < vts.totalDecs) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 3) {
+        vts.totalChars += 1
+        if (providedFeatures.varTypes.totalChars < vts.totalChars) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 4) {
+        vts.totalBools += 1
+        if (providedFeatures.varTypes.totalBools < vts.totalBools) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 5) {
+        vts.totalDatas += 1
+        if (providedFeatures.varTypes.totalDatas < vts.totalDatas) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 6) {
+        vts.totalIntArrs += 1
+        if (providedFeatures.varTypes.totalIntArrs < vts.totalIntArrs) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 7) {
+        vts.totalDecArrs += 1
+        if (providedFeatures.varTypes.totalDecArrs < vts.totalDecArrs) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 8) {
+        vts.totalCharArrs += 1
+        if (providedFeatures.varTypes.totalCharArrs < vts.totalCharArrs) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 9) {
+        vts.totalBoolArrs += 1
+        if (providedFeatures.varTypes.totalBoolArrs < vts.totalBoolArrs) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 10) {
+        vts.totalDataArrs += 1
+        if (providedFeatures.varTypes.totalDataArrs < vts.totalDataArrs) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 11) {
+        vts.totalObjs += 1
+        if (providedFeatures.varTypes.totalObjs < vts.totalObjs) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 12) {
+        vts.totalObjArrs += 1
+        if (providedFeatures.varTypes.totalObjArrs < vts.totalObjArrs) {
+          update.isValid = false
+          return null
+        }
+      }
+      else if (decType == 13) {
+        vts.totalFuncArrs += 1
+        if (providedFeatures.varTypes.totalFuncArrs < vts.totalFuncArrs) {
+          update.isValid = false
+          return null
+        }
+      }
       update.varTypes = vts
     }
     else if (lineType == 2) {

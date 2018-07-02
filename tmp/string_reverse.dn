@@ -1,0 +1,18 @@
+component provides StringStringFunction {
+
+	char[] StringStringFunction:function(char str[])
+	{
+    int i
+    int strLength
+    bool condition
+    char reverse[]
+    strLength = str.arrayLength
+    i = strLength - 1
+    condition = i >= 0
+    while (condition)
+    {
+      reverse = new char[](reverse, str[i])
+    }
+    return reverse
+	}
+}

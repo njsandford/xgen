@@ -63,6 +63,7 @@ data Operation {
 	int decType // declaration type, integer between 1 and 6 representing [int, dec, bool, char, void, Data]
 	int asmtType // assignment type, integer between 1 and 24
 	char rhsAssign[] // holds the string value of the rhs of an assignment
+	int opType // operation type, integer between 1 and 20, represents the operation symbol used on the rhs, e.g. ==, -, +, /, etc.
 }
 
 // NOTE:
@@ -112,6 +113,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		char providedInterfaceType[]
 
 		String searchDirectories[]
+
+		FunctionPrototype testFunction
+		int testsFailed
 
 		Generator:Generator(String searchPaths[])
 		{
@@ -550,16 +554,20 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return n
 		}
 
-		Operation[] generateDeclarations(int ins[])
+		Operation[] generateDeclarations(int ins[], String paramTypes[])
 		{
 			Operation result[]
 
 			//one of each available type, starting from ins end
 			int si = 0
 
+			// NOTE: had to modify this for initial option, as starting function parameter was causing it to skip all options previous to that, so now checks last option AFTER parameters.
 			if (ins != null)
 			{
-				si = ins[ins.arrayLength-1]
+				if (paramTypes == null || (ins.arrayLength > paramTypes.arrayLength))
+				{
+					si = ins[ins.arrayLength-1]
+				}
 			}
 
 			for (int i = si; i < types.arrayLength; i++)
@@ -1379,33 +1387,36 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return result
 		}
 
-		Operation[] generateOperations(int ins[], int remainingLines, bool noDeclarations, bool blank, bool outerScope)
+		Operation[] generateOperations(int ins[], int remainingLines, bool noDeclarations, bool blank, bool outerScope, String paramTypes[])
 		{
 			Operation result[]
 
 			if (!blank)
 			{
 				//all declarations of new variables, of every possible type
+				// NOTE: modify this so if noDeclarations == false, ONLY generate declarations!
 				if (!noDeclarations)
-				result = new Operation[](result, generateDeclarations(ins))
+				{
+					result = new Operation[](result, generateDeclarations(ins, paramTypes))
+				}
+				else {
+					//all assignments of any in-scope variable to X (where X is any in-scope variable, or any function call, or any literal from a subsampled set of options)
+					// - function parameters will need every option from X, up to a max. nesting depth
+					result = new Operation[](result, generateAssignments(ins))
 
-				//all assignments of any in-scope variable to X (where X is any in-scope variable, or any function call, or any literal from a subsampled set of options)
-				// - function parameters will need every option from X, up to a max. nesting depth
-				result = new Operation[](result, generateAssignments(ins))
+					//all function calls on objects (not using their return values)
+					result = new Operation[](result, generateLocalObjectCalls(ins))
 
-				//all function calls on objects (not using their return values)
-				result = new Operation[](result, generateLocalObjectCalls(ins))
+					//all return options (TODO)
 
-				//all return options (TODO)
+					//all calls of local functions (TODO)
 
-				//all calls of local functions (TODO)
-
-				//all control flow blocks, using X (boolean) in its header, of every possible length from 1 to (max_lines - here)
-				result = new Operation[](result, generateControlBlocks(ins, remainingLines))
+					//all control flow blocks, using X (boolean) in its header, of every possible length from 1 to (max_lines - here)
+					result = new Operation[](result, generateControlBlocks(ins, remainingLines))
+				}
 			}
-
 			//blank lines (note, there's no point creating these for sub-scopes, as these are already length-controlled separately)
-			if (outerScope) result = new Operation[](result, new Operation(null, null, 0))
+			else if (outerScope) result = new Operation[](result, new Operation(null, null, 0))
 
 			return result
 		}
@@ -1416,10 +1427,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		{
 			Node result[]
 
-			Operation ops[] = generateOperations(n.inScope, remainingLines, n.declarationsComplete, n.blankLines, outerScope)
-
+			Operation ops[] = generateOperations(n.inScope, remainingLines, n.declarationsComplete, n.blankLines, outerScope, featureBuilder.getParameterTypes())
 			for (int j = 0; j < ops.arrayLength; j++)
 			{
+				/* out.println("Option $(iu.intToString(j)): $(ops[j].line), lineType: $(iu.intToString(ops[j].lineType)), decType: $(iu.intToString(ops[j].decType)), asmtType: $(iu.intToString(ops[j].asmtType))") */
+
 				char newLine[] = makeNewLine(ops[j]) // NOTE: This is the string line of code!
 
 				int newins[]
@@ -1464,6 +1476,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					newNode.declarationsComplete = true
 					if (n.declarationsComplete == false) {
 						newNode.firstPostDec = true // Flag this as the first option after the declarations have been completed - final place to check declarations.					}
+					}
 				}
 				if (ops[j].line == null) {
 					newNode.blankLines = true // this could also be a count of all blank lines, where a value > 0 is equivalent to 'true'.
@@ -1538,8 +1551,6 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return result
 		}
 
-		FunctionPrototype testFunction
-		int testsFailed
 
 		//NOTE: this function operates by "return" purely because adding to a global array within "ps" is super slow
 		// (as it tends to expand an already-big array, rather than expanding incrementally smaller arrays as it goes)
@@ -1559,6 +1570,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 				Node options[] = buildNextLine(start, lineCount, addReturn, featureBuilder)
 				//Node options[] = buildTree_summary(start, lineCount)
+				out.println("Options: $(iu.intToString(options.arrayLength))")
+				for (int i = 0; i < options.arrayLength; i++)
+				{
+					out.println("$(iu.intToString(i)): $(options[i].lineInfo.line)")
+				}
 				int offset = 0
 
 				if (fastForward != null)
@@ -1597,24 +1613,24 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 					//PIFixed newFeatures
 					options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
-					out.println("literal val: $(lineInfo.rhsAssign)")
+					/* out.println("literal val: $(lineInfo.rhsAssign)") */
 					/* options[i].features = featureBuilder.copyFeatures(newFeatures) */
 
-					bool rejectBranch = false
-					if (options[i].features != null) {
+					bool rejectBranch //= false
+					//if (options[i].features != null) {
 						rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
-					}
-					else rejectBranch = true
+					/* }
+					else rejectBranch = true */
 
-					/* if (rejectBranch)// (!rejectEarly && programIsReachable)
+					if (rejectBranch)// (!rejectEarly && programIsReachable)
 					{
 						//options[i].features = previousFeatures
 						//start.features = previousFeatures
 
 						testsFailed ++
 
-						if (testsFailed % 100 == 0 && addReturn)
-						{
+						/* if (testsFailed % 100 == 0 && addReturn) */
+						/* { */
 							//out.println("ACL: $(iu.intToString(start.lines.arrayLength))")
 							int currentLines[] = options[i].lines
 							currentLines = new int[](start.lines, set)
@@ -1634,8 +1650,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 								if (lines[j].string == options[i].lineInfo.line) out.println(" << --")
 								else out.println("")
 						  }
-						}
-					} */
+						/* } */
+					}
 
 					/* if (!rejectEarly && programIsReachable) { */
 					if (!rejectBranch)//(!rejectEarly && programIsReachable)
@@ -1959,6 +1975,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			PermutationSet ps = new PermutationSet(lineCount, lineCount, maxOptions)
 
 			testFunction = fp
+			featureBuilder.setParameterTypes(fp.parameterTypes)
 
 			int ins[] = null
 
@@ -2030,7 +2047,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				if (top.remainingLines == 0 && top.next == null)
 				options = generateReturns(top.ins, fp.returnType)
 				else
-				options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null)
+				options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null, fp.parameterTypes)
 
 				Operation choice = options[leaf.lines[i]]
 

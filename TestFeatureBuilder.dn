@@ -5,7 +5,7 @@ uses data.IntUtil
 
 component provides App requires Generator, FeatureBuilder, io.Output out, data.StringUtil, data.IntUtil {
 
-  PIFixed providedFeatures = new PIFixed(4, 4, 2, 0, 0, 1, 2, 0, 1, 2, 3, 2, null, 0, 0)
+  /* PIFixed providedFeatures = new PIFixed(4, 4, 2, 0, 0, 1, 2, 0, 1, 2, 3, 2, null, 0, 0)
 
   void printFeatureVector(PIFixed vf) {
     IntUtil intUtil = new IntUtil()
@@ -19,11 +19,11 @@ component provides App requires Generator, FeatureBuilder, io.Output out, data.S
     out.println("Highest Control Block Nesting Level: $(intUtil.intToString(vf.highestNestingLevel))")
     out.println("Total Assignments: $(intUtil.intToString(vf.totalAssignments))")
     out.println("Total Non Blank Lines: $(intUtil.intToString(vf.nonBlankLines))")
-  }
+  } */
 
   int App:main(AppParam params[]) {
 
-    char nextLine[]
+    /* char nextLine[]
     char whileLoop[] = "while (x)"
     char ifStatement[] = "if (x)"
     char declaration[] = "int x"
@@ -37,7 +37,7 @@ component provides App requires Generator, FeatureBuilder, io.Output out, data.S
     FeatureBuilder featureBuilder = new FeatureBuilder()
     PIFixed currentFeatures = featureBuilder.getNewFeatureVector()
     PIFixed updatedFeatures = featureBuilder.updateFeatureVector(currentFeatures, lineType, nextLine, subLinesCount)
-    printFeatureVector(updatedFeatures)
+    printFeatureVector(updatedFeatures) */
 
     return 0
   }

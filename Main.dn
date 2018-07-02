@@ -149,27 +149,31 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		char buildInterface[] = "IntFunction"
 		int lineCount = 1 */
 
+		char unitTests[] = "input_string_reverse.txt"
+		char testProgram[] = "UnitTest_String_Reverse.o"
+		char buildInterface[] = "StringStringFunction"
+		int lineCount = 4
 
-		char unitTests[] = "input_search_count.txt"
+		/* char unitTests[] = "input_search_count.txt"
 		char testProgram[] = "UnitTest_SearchCount.o"
 		char buildInterface[] = "Int_IntArray_Int_Function"
-		int lineCount = 10//16 //17 //7
+		int lineCount = 3//16 //17 //7 */
 
-		VariableTypes varTypes = new VariableTypes(/*totalInts*/0, /*totalDecs*/lineCount, /*totalChars*/0, /*totalBools*/0, /*totalDatas*/0, /*totalIntArrs*/0, /*totalDecArrs*/0, /*totalCharArrs*/0, /*totalBoolArrs*/0, /*totalDataArrs*/0, /*totalObjs*/0, /*totalObjArrs*/0, /*totalFuncArrs*/0)
+		VariableTypes varTypes = new VariableTypes(/*totalInts*/2, /*totalDecs*/0, /*totalChars*/0, /*totalBools*/1, /*totalDatas*/0, /*totalIntArrs*/0, /*totalDecArrs*/0, /*totalCharArrs*/1, /*totalBoolArrs*/0, /*totalDataArrs*/0, /*totalObjs*/0, /*totalObjArrs*/0, /*totalFuncArrs*/0)
 		AssignmentTypes asmtTypes = new AssignmentTypes(/*totalVarToLit*/0, /*totalVarToVar*/0, /*totalVarToInd*/0, /*totalVarToField*/0, /*totalVarToData*/0, /*totalVarToObj*/0, /*totalVarToArrConcat*/0,
 			/*totalVarToArrClone*/0, /*totalVarToDataClone*/0, /*totalVarToFunc*/0, /*totalVarToGOFunc*/0, /*totalVarToLOFunc*/0,
 			/*totalIndToLit*/0, /*totalIndToVar*/0, /*totalIndToInd*/0, /*totalIndToField*/0, /*totalIndToData*/0, /*totalIndToObj*/0, /*totalIndToArrConcat*/0,
 			/*totalIndToArrClone*/0, /*totalIndToDataClone*/0, /*totalIndToFunc*/0, /*totalIndToGOFunc*/0, /*totalIndToLOFunc*/0,
 			/*totalDataToLit*/0, /*totalDataToVar*/0, /*totalDataToInd*/0, /*totalDataToField*/0, /*totalDataToData*/0, /*totalDataToObj*/0, /*totalDataToArrConcat*/0,
 			/*totalDataToArrClone*/0, /*totalDataToDataClone*/0, /*totalDataToFunc*/0, /*totalDataToGOFunc*/0, /*totalDataToLOFunc*/0, /*literalValue*/"")
-//		OperatorTypes opTypes = new OperatorTypes(/*totalAdd*/2, /*totalSub*/0, /*totalMul*/0, /*totalDiv*/0, /*totalMod*/0, /*totalBOr*/0, /*totalBAnd*/0, /*totalBXor*/0, /*totalBFlip*/0, /*totalLShift*/0,
-//			/*totalRShift*/0, /*totalSEqu*/0, /*totalSNotEqu*/0, /*totalGreater*/0, /*totalLess*/2, /*totalGreaterEqu*/0, /*totalLessEqu*/0, /*totalNot*/0, /*totalEqu*/1, /*totalNotEqu*/0)
+		OperatorTypes opTypes = new OperatorTypes(/*totalAdd*/0, /*totalSub*/0, /*totalMul*/0, /*totalDiv*/0, /*totalMod*/0, /*totalBOr*/0, /*totalBAnd*/0, /*totalBXor*/0, /*totalBFlip*/0, /*totalLShift*/0,
+			/*totalRShift*/0, /*totalSEqu*/0, /*totalSNotEqu*/0, /*totalGreater*/0, /*totalLess*/0, /*totalGreaterEqu*/0, /*totalLessEqu*/0, /*totalNot*/0, /*totalEqu*/0, /*totalNotEqu*/0)
 
 		/* Provided feature vector for counting program */
 		/* PIFixed providedFeatures = new PIFixed(lineCount, 21, 6, 0, 8, 1, 1, 0, 1, 7, 1, 1, null, 0, 0, 0) */
 		/* PIFixed providedFeatures = new PIFixed(lineCount, lineCount, 6, 0, 8, 1, 1, 0, 0, 0, 0, 1, null, 0, 0, 0) */
 //		PIFixed providedFeatures = new PIFixed(/*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/0, /*nonInputVars*/0, /*totalAssignments*/1, /*totalWhiles*/0, /*totalIfs*/0, /*totalFunctionCalls*/0, /*totalReturns*/0, /*aveLoopLength*/0, /*aveWhileLength*/0, /*highestNestingLevel*/0, /*remainingLinesInBlock*/null, /*totalLoopLength*/0, /*totalWhileLength*/0, /*minimumLinesToComplete*/0)
-		PIFixed providedFeatures = new PIFixed(/*isValid*/true, /*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/lineCount, /*varTypes*/varTypes, /*nonInputVars*/0, /*totalAssignments*/0, /*asmtTypes*/asmtTypes, /*totalWhiles*/0, /*totalIfs*/0, /*totalFunctionCalls*/0, /*totalReturns*/0, /*aveLoopLength*/0,
+		PIFixed providedFeatures = new PIFixed(/*isValid*/true, /*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/4, /*varTypes*/varTypes, /*nonInputVars*/0, /*totalAssignments*/0, /*asmtTypes*/asmtTypes, /*totalOperations*/0, /*opTypes*/opTypes, /*totalWhiles*/0, /*totalIfs*/0, /*totalFunctionCalls*/0, /*totalReturns*/0, /*aveLoopLength*/0,
 			/*aveWhileLength*/0, /*highestNestingLevel*/0, /*remainingLinesInBlock*/null, /*totalLoopLength*/0, /*totalWhileLength*/0, /*minimumLinesToComplete*/0)
 
 		int maxDeviation = 0 // Change this as neccesary.

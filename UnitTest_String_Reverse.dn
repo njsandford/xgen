@@ -1,8 +1,8 @@
-uses IntFunction
+uses StringStringFunction
 
 const int HALT_TIMESTEP = 50
 
-component provides UnitTest requires data.json.JSONParser parser, io.File, data.query.Search search, composition.RecursiveLoader loader, data.IntUtil iu, io.Output out, LatchedHalt {
+component provides UnitTest requires data.json.JSONParser parser, io.File, data.query.Search search, composition.RecursiveLoader loader, data.StringUtil su, data.IntUtil iu, io.Output out, LatchedHalt {
 
 	JSONElement doc
 
@@ -19,18 +19,18 @@ component provides UnitTest requires data.json.JSONParser parser, io.File, data.
 
 	Object getObject(IDC com, char testInterface[])
 		{
-		return new IntFunction() from com :< testInterface
+		return new StringStringFunction() from com :< testInterface
 		}
 
-	bool testFunction(IntFunction a, char name[], JSONElement test)
+	bool testFunction(StringStringFunction a, char name[], JSONElement test)
 		{
 		if (name == "function")
 			{
-			int formal = iu.intFromString(parser.getValue(test, "return").value)
-			int param0 = iu.intFromString(parser.getValue(test, "params").children[0].value)
-			int param1 = iu.intFromString(parser.getValue(test, "params").children[1].value)
+			char formal[] = parser.getValue(test, "return").value
+			char param0[] = parser.getValue(test, "params").children[0].value
+			/* int param1 = iu.intFromString(parser.getValue(test, "params").children[1].value) */
 
-			int actual = a.function(param0, param1)
+			char actual[] = a.function(param0)
 
 			return formal == actual
 			}

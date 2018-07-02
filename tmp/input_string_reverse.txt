@@ -1,0 +1,8 @@
+{
+"tests" :
+[
+{"function" : "function", "link" : false, "return" : "olleh", "params" : {"a": "hello"}},
+{"function" : "function", "link" : false, "return" : "gnirts a si siht", "params" : {"a": "this is a string"}},
+{"function" : "function", "link" : false, "return" : "murder a redrum", "params" : {"a": "redrum a murder"}}
+]
+}

@@ -71,7 +71,7 @@ component provides CodeSearch:RandomSparseSamples requires io.Output out, data.I
 		return encoded
 		}
 
-	void getSamples(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, int count, Generator generator, RandomInt rgen, char buildFolder[], UnitTest ut, char tmpName[])
+	void getSamples(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, int count, Generator generator, RandomInt rgen, char buildFolder[], UnitTest ut, char tmpName[], FeatureBuilder featureBuilder)
 		{
 		String requiresList[] = generator.getRequiresList()
 
@@ -105,7 +105,7 @@ component provides CodeSearch:RandomSparseSamples requires io.Output out, data.I
 		{
 		//first get any solutions for all functions of the interface, so that the overall component will compile correctly
 
-		FunctionSource foundFunctions[] = primeFunctions(functionList, generator)
+		FunctionSource foundFunctions[] = primeFunctions(functionList, generator, featureBuilder)
 
 		dataLog = new Logger("results_data.txt")
 		statusLog = new Logger("results_log.txt")
@@ -130,7 +130,7 @@ component provides CodeSearch:RandomSparseSamples requires io.Output out, data.I
 				{
 				for (int j = 0; j < EXS_THREAD_COUNT && samplesTaken < sampleCount; j++)
 					{
-					pool[j] = asynch::getSamples(buildInterface, clone foundFunctions, i, nfc, batchSize, generator, rgen, buildFolder, ut, "test$(iu.intToString(j))")
+					pool[j] = asynch::getSamples(buildInterface, clone foundFunctions, i, nfc, batchSize, generator, rgen, buildFolder, ut, "test$(iu.intToString(j))", featureBuilder)
 
 					samplesTaken += batchSize
 					}

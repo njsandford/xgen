@@ -145,6 +145,10 @@ interface FeatureBuilder {
 
   String[] getParameterTypes()
 
+  bool areDeclarationsComplete(int totalVars)
+
+  int totalVarsRequired()
+
   /* get a new PIFixed feature vector for the current feature vector (of a node) plus the new line. */
   /* FeatureVector updateFeatureVector(FeatureVector current, String newLine) */
   PIFixed updateFeatureVector(PIFixed currentFeatures, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[]) // Pass the new node, which contains the feature vector, the new line, and all information for the operation

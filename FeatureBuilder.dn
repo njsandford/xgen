@@ -55,6 +55,14 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     return parameterTypes
   }
 
+  bool FeatureBuilder:areDeclarationsComplete(int totalVars) {
+    return totalVars == providedFeatures.totalVars
+  }
+
+  int FeatureBuilder:totalVarsRequired() {
+    return providedFeatures.totalVars
+  }
+
   /* update the assignment type counts */
   AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType, char rhsAssign[]) {
     AssignmentTypes ats = clone asmtTypes
@@ -143,6 +151,11 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       if (providedFeatures.totalVars < update.totalVars) {
         update.isValid = false
         /* return null */
+      }
+      if (providedFeatures.totalVars >= update.totalLines) {
+        // should not do any further declarations. Set declarations complete to TRUE.
+        // can check here if we have enough declarations.
+
       }
       // OR if declarations complete, are provided total vars != current total vars, is valid = false
       // NOTE: declatations complete check must be done elsewhere, preferably on the first line after the last declaration only.
@@ -356,6 +369,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
 
   bool FeatureBuilder:rejectEarly(PIFixed currentFeatures, int linesRemaining) {
     // NOTE: complete!
+    /* printFeatures(currentFeatures) */
     // Check if too many variables have been declared
     if (currentFeatures.totalVars > providedFeatures.totalVars) {
       return true
@@ -440,7 +454,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     bool minLinesToComplete = hasMinLinesToCompleteFeatures(current, linesRemaining)
     bool areFeaturesReachable = areFeaturesReachable(current, declarationsComplete, linesRemaining)
     bool rejectEarly = rejectEarly(current, linesRemaining)
-    if (rejectEarly || !minLinesToComplete || !areFeaturesReachable)//
+    if (rejectEarly || !minLinesToComplete || !areFeaturesReachable)
     {
       rejectedBranches += 1
       output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")

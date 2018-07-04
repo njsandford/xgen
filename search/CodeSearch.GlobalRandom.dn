@@ -24,10 +24,10 @@ component provides CodeSearch:GlobalRandom requires io.Output out, data.IntUtil 
 			// - we could either just assume that "all 0's" works (but this requires the first param to be of the function's return type), or go random instead?
 
 			Option q = generator.getRandomOption(functionList[i].prototype, functionList[i].lineCount, randomInt, featureBuilder)
-			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, q))
+			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, q, featureBuilder))
 
 			//OptionSet ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, 1, null, featureBuilder)
-			//foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0]))
+			//foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0], featureBuilder))
 			}
 
 		return foundFunctions
@@ -51,7 +51,7 @@ component provides CodeSearch:GlobalRandom requires io.Output out, data.IntUtil 
 		return encoded
 		}
 
-	bool randomSearch(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], Generator generator, char buildFolder[], UnitTest ut)
+	bool randomSearch(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], Generator generator, char buildFolder[], UnitTest ut, FeatureBuilder featureBuilder)
 		{
 		String requiresList[] = generator.getRequiresList()
 
@@ -68,7 +68,7 @@ component provides CodeSearch:GlobalRandom requires io.Output out, data.IntUtil 
 			{
 			int nextIndex = randomInt.get(options.arrayLength)
 
-			String function[] = generator.decodeOption(spec.prototype, options[nextIndex])
+			String function[] = generator.decodeOption(spec.prototype, options[nextIndex], featureBuilder)
 			functions[functionIndex] = new FunctionSource(function)
 
 			String compsrc[] = testSystem.makeComponentSource(src)
@@ -111,7 +111,7 @@ component provides CodeSearch:GlobalRandom requires io.Output out, data.IntUtil 
 			{
 			out.println("found $(iu.intToString(fsets[i].options.arrayLength)) programs for $(functionList[i].name)")
 
-			randomSearch(buildInterface, foundFunctions, i, functionList[i], fsets[i].options, generator, buildFolder, ut)
+			randomSearch(buildInterface, foundFunctions, i, functionList[i], fsets[i].options, generator, buildFolder, ut, featureBuilder)
 			}
 		}
 

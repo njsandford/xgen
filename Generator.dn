@@ -1396,27 +1396,25 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				//all declarations of new variables, of every possible type
 				// NOTE: modify this so if noDeclarations == false, ONLY generate declarations!
 				if (!noDeclarations)
-				{
-					result = new Operation[](result, generateDeclarations(ins, paramTypes))
-				}
-				else {
-					//all assignments of any in-scope variable to X (where X is any in-scope variable, or any function call, or any literal from a subsampled set of options)
-					// - function parameters will need every option from X, up to a max. nesting depth
-					result = new Operation[](result, generateAssignments(ins))
+				result = new Operation[](result, generateDeclarations(ins, paramTypes))
 
-					//all function calls on objects (not using their return values)
-					result = new Operation[](result, generateLocalObjectCalls(ins))
+				//all assignments of any in-scope variable to X (where X is any in-scope variable, or any function call, or any literal from a subsampled set of options)
+				// - function parameters will need every option from X, up to a max. nesting depth
+				result = new Operation[](result, generateAssignments(ins))
 
-					//all return options (TODO)
+				//all function calls on objects (not using their return values)
+				result = new Operation[](result, generateLocalObjectCalls(ins))
 
-					//all calls of local functions (TODO)
+				//all return options (TODO)
 
-					//all control flow blocks, using X (boolean) in its header, of every possible length from 1 to (max_lines - here)
-					result = new Operation[](result, generateControlBlocks(ins, remainingLines))
-				}
+				//all calls of local functions (TODO)
+
+				//all control flow blocks, using X (boolean) in its header, of every possible length from 1 to (max_lines - here)
+				result = new Operation[](result, generateControlBlocks(ins, remainingLines))
+
 			}
 			//blank lines (note, there's no point creating these for sub-scopes, as these are already length-controlled separately)
-			else if (outerScope) result = new Operation[](result, new Operation(null, null, 0))
+			if (outerScope) result = new Operation[](result, new Operation(null, null, 0))
 
 			return result
 		}
@@ -1435,17 +1433,21 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				char newLine[] = makeNewLine(ops[j]) // NOTE: This is the string line of code!
 
 				int newins[]
+				bool newdec
 
 				/* New inscope variables */
 				if (ops[j].newVar == null)
 				newins = n.inScope
 				else
-				newins = new int[](n.inScope, ops[j].newVar.typeIndex)
+				{
+					newins = new int[](n.inScope, ops[j].newVar.typeIndex)
+					newdec = true
+				}
 
 				SearchScope newss[]
 
 				if (ops[j].subLinesCount > 0) {
-					newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, newins), ops[j].subLinesCount))
+					newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, false, newins), ops[j].subLinesCount))
 					//newlt = // This indicates that it is a control block?
 				}
 				else {
@@ -1455,6 +1457,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				/* Node newNode = clone n */
 				Node newNode = new Node()
 				newNode.lines = n.lines
+				newNode.declaration = newdec
 				newNode.declarationsComplete = n.declarationsComplete
 				newNode.blankLines = n.blankLines
 				newNode.firstPostDec = false
@@ -1472,11 +1475,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				newNode.features = featureBuilder.copyFeatures(n.features)
 				/* newNode.features.remainingLinesInBlock = clone n.features.remainingLinesInBlock */
 
-				if (ops[j].newVar == null) {
-					newNode.declarationsComplete = true
-					if (n.declarationsComplete == false) {
+				// NOTE: Add check for if prev declarations complete is true, if so, keep it that way.
+				if (n.declarationsComplete || ops[j].newVar == null) {
+					newNode.declarationsComplete = true // NOTE: still need this for if not enough decs have been declared.
+					/* if (ops[j].newVar == null) { // if last node was a declaration, this is the first non declaration NOTE: this may not work now that the declaration strategy has changed.
 						newNode.firstPostDec = true // Flag this as the first option after the declarations have been completed - final place to check declarations.					}
-					}
+					} */
 				}
 				if (ops[j].line == null) {
 					newNode.blankLines = true // this could also be a count of all blank lines, where a value > 0 is equivalent to 'true'.
@@ -1508,11 +1512,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				SearchScope newss[]
 
 				if (ops[j].subLinesCount > 0)
-				newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, newins), ops[j].subLinesCount))
+				newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, false, newins), ops[j].subLinesCount))
 				else
 				newss = n.subLines
 
-				Node newNode = new Node(null, newins)
+				Node newNode = new Node(null, false, newins)
 				newNode.subLines = newss
 				newNode.lineInfo = ops[j]
 				result = new Node[](result, newNode)
@@ -1563,7 +1567,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			/* Node previousNode = clone start */
 
 			/* int linesRemaining = globalLineCount - 1 */
-
+			out.println("root declarationsComplete: $(iu.intToString(start.declarationsComplete))")
 			if (lineCount > 0)
 			{
 				int linesRemaining = globalLineCount - 1
@@ -1583,9 +1587,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					options = removeFirstCells(options, fastForward.lines[ps.totalLines - lineCount])
 					offset = fastForward.lines[ps.totalLines - lineCount]
 				}
+				int endInd = options.arrayLength
+				if (!start.declarationsComplete) endInd = 13
 
 				/* PIFixed previousFeatures = clone start.features */
-				for (int i = 0; i < options.arrayLength; i++)
+				//for (int i = 0; i < options.arrayLength; i++)
+				for (int i = 0; i < endInd; i++)
 				{
 					int set = offset+i
 
@@ -1615,14 +1622,18 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
 					/* out.println("literal val: $(lineInfo.rhsAssign)") */
 					/* options[i].features = featureBuilder.copyFeatures(newFeatures) */
+					out.println("before declarationsComplete: $(iu.intToString(options[i].declarationsComplete))")
+					if ((!options[i].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[i].features.totalVars))) options[i].declarationsComplete = true
+					/* else options[i].declarationsComplete = false */
+					out.println("after declarationsComplete: $(iu.intToString(options[i].declarationsComplete))")
 
 					bool rejectBranch //= false
 					//if (options[i].features != null) {
-						rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
+					rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
 					/* }
 					else rejectBranch = true */
 
-					if (rejectBranch)// (!rejectEarly && programIsReachable)
+					if (!rejectBranch)// (!rejectEarly && programIsReachable)
 					{
 						//options[i].features = previousFeatures
 						//start.features = previousFeatures
@@ -1643,7 +1654,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							for (int j = 0; j < lineCount; j++) {
 								currentLines = new int[](currentLines, 0)
 							}
-							String lines[] = decodeOption(testFunction, options[i])
+							String lines[] = decodeOption(testFunction, options[i], featureBuilder)
 							out.println("")
 						  for (int j = 0; j < lines.arrayLength; j++) {
 						  	out.print(lines[j].string)
@@ -1984,7 +1995,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
 			}
 
-			Node root = new Node(null, ins)
+			// NOTE: specify at the start whether or not to do any variable declarations
+			bool declarationsComplete = false
+			if (featureBuilder.totalVarsRequired() == 0) declarationsComplete == true
+
+			Node root = new Node(null, !declarationsComplete, ins)
 
 			// NOTE: pass feature vector here:
 			Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, lineCount, true, featureBuilder)
@@ -2003,8 +2018,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
 			}
 
-			Node root = new Node(null, ins)
+			// NOTE: specify at the start whether or not to do any variable declarations
+			bool declarationsComplete = false
+			if (featureBuilder.totalVarsRequired() == 0) declarationsComplete == true
 
+			Node root = new Node(null, !declarationsComplete, ins)
 			Node choice = null
 
 			while (choice == null)
@@ -2015,11 +2033,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return choice
 		}
 
-		String[] Generator:decodeOption(FunctionPrototype fp, Option leaf)
+		String[] Generator:decodeOption(FunctionPrototype fp, Option leaf, FeatureBuilder fb)
 		{
 			String lines[]
 
-			bool declarationsComplete
+			bool declarationsComplete //= !leaf.declaration
 			bool blankLines
 
 			//this is a decoder over the "lines" of leaf, building our variable list as we go
@@ -2036,10 +2054,14 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 			ScopeStackItem top = new ScopeStackItem(ins, leaf.lines.arrayLength - 1)
 
+			int varCount = 0
+
 			for (int i = 0; i < leaf.lines.arrayLength; i++)
 			{
 				//get all options, use the i'th one
 				// - if it's a variable declare, add to "ins"
+
+				if (fb.areDeclarationsComplete(varCount)) declarationsComplete = true
 
 				Operation options[]
 
@@ -2049,9 +2071,14 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				else
 				options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null, fp.parameterTypes)
 
+				out.println("options: $(iu.intToString(options.arrayLength)), leaf line: $(iu.intToString(i)), line val: $(iu.intToString(leaf.lines[i]))")
+				for (int j = 0; j < options.arrayLength; j++) {
+					out.println("option $(iu.intToString(j)): $(options[j].line)")
+				}
 				Operation choice = options[leaf.lines[i]]
 
 				if (choice.newVar == null) declarationsComplete = true
+				else varCount ++
 				if (choice.line == null) blankLines = true
 
 				// - if it's a sub-scope, clone ins and stack it up

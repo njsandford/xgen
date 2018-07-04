@@ -15,6 +15,7 @@ data FunctionPrototype {
 /* A possible program */
 data Option {
 	int lines[]
+	bool declaration // Is this a declaration or not
 	}
 
 /* The set of possible programs */
@@ -33,15 +34,15 @@ interface Generator {
 	void addResource(char path[])
 	void addGlobalAPI(char package[])
 
-	OptionSet getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
+	OptionSet getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder fb)
 
-	Option getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource, FeatureBuilder featureBuilder)
+	Option getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource, FeatureBuilder fb)
 
 	//int countOptions(FunctionPrototype fp, int lineCount)
 	//int getIndexOf(FunctionPrototype fp, int lineCount, Option o)
 	//Option getOptionAt(FunctionPrototype fp, int lineCount, int index)
 
-	String[] decodeOption(FunctionPrototype fp, Option n)
+	String[] decodeOption(FunctionPrototype fp, Option n, FeatureBuilder fb)
 
 	String[] getRequiresList()
 

@@ -1,0 +1,8 @@
+{
+"tests" :
+[
+{"function" : "function", "link" : false, "return" : "15", "params" : {"a": [1, 2, 3, 4, 5]]}},
+{"function" : "function", "link" : false, "return" : "120", "params" : {"a": [10, 10, 20, 20, 30, 30]}},
+{"function" : "function", "link" : false, "return" : "36", "params" : {"a": "5, 2, 0, 1, 4, 24"}}
+]
+}

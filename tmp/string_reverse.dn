@@ -4,14 +4,19 @@ component provides StringStringFunction {
 	{
     int i
     int strLength
+    int decrement
+    int zero
     bool condition
     char reverse[]
     strLength = str.arrayLength
-    i = strLength - 1
-    condition = i >= 0
+    decrement = 1
+    zero = strLength - strLength
+    i = strLength - decrement
+    condition = i >= zero
     while (condition)
     {
       reverse = new char[](reverse, str[i])
+      i = i - decrement
     }
     return reverse
 	}

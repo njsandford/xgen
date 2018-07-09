@@ -24,7 +24,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 
 			OptionSet ops = generator.getOptions(functionList[i].prototype, functionList[i].lineCount, 1, null, featureBuilder)
 
-			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0]))
+			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0], featureBuilder))
 			}
 
 		return foundFunctions
@@ -56,7 +56,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 		return encoded
 		}
 
-	void searchSector(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], Generator generator, char buildFolder[], UnitTest ut, int overallOffset, int offset, int length, char tmpName[])
+	void searchSector(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], Generator generator, char buildFolder[], UnitTest ut, int overallOffset, int offset, int length, char tmpName[], FeatureBuilder featureBuilder)
 		{
 		ComponentSource src = new ComponentSource()
 		src.requiredInterfaces = generator.getRequiresList()
@@ -65,7 +65,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 
 		for (int i = offset; i < offset+length; i++)
 			{
-			String function[] = generator.decodeOption(spec.prototype, options[i])
+			String function[] = generator.decodeOption(spec.prototype, options[i], featureBuilder)
 			functions[functionIndex] = new FunctionSource(function)
 
 			//printLines(function)
@@ -81,7 +81,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 			}
 		}
 
-	void exhaustiveSearch(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], int overallOffset, Generator generator, char buildFolder[], UnitTest ut)
+	void exhaustiveSearch(char buildInterface[], FunctionSource functions[], int functionIndex, FunctionData spec, Option options[], int overallOffset, Generator generator, char buildFolder[], UnitTest ut, FeatureBuilder fb)
 		{
 		int portionSize = options.arrayLength / EXS_THREAD_COUNT
 
@@ -90,7 +90,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 		int offset = 0
 		for (int i = 0; i < EXS_THREAD_COUNT; i++)
 			{
-			pool[i] = asynch::searchSector(buildInterface, clone functions, functionIndex, spec, options, generator, buildFolder, ut, overallOffset, offset, portionSize, "test$(iu.intToString(i))")
+			pool[i] = asynch::searchSector(buildInterface, clone functions, functionIndex, spec, options, generator, buildFolder, ut, overallOffset, offset, portionSize, "test$(iu.intToString(i))", fb)
 
 			offset += portionSize
 			}
@@ -100,7 +100,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 			pool[i].join()
 			}
 
-		searchSector(buildInterface, functions, functionIndex, spec, options, generator, buildFolder, ut, overallOffset, offset, options.arrayLength - offset, "test0")
+		searchSector(buildInterface, functions, functionIndex, spec, options, generator, buildFolder, ut, overallOffset, offset, options.arrayLength - offset, "test0", fb)
 		}
 
 	void CodeSearch:search(char buildFolder[], char buildInterface[], FunctionData functionList[], Generator generator, UnitTest ut, FeatureBuilder featureBuilder)
@@ -136,7 +136,7 @@ component provides CodeSearch:Exhaustive requires io.Output out, data.IntUtil iu
 					moreOptions = false
 					}
 
-				exhaustiveSearch(buildInterface, foundFunctions, i, nfc, options, indexOffset, generator, buildFolder, ut)
+				exhaustiveSearch(buildInterface, foundFunctions, i, nfc, options, indexOffset, generator, buildFolder, ut, featureBuilder)
 
 				if (options != null)
 					{

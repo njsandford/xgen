@@ -1,0 +1,21 @@
+component provides IntStringFunction {
+
+	int IntStringFunction:function(char str[])
+	{
+    int i
+    int strLength
+    int increment
+    int count
+    bool condition
+    /* i = 0 */
+    strLength = str.arrayLength
+    increment = 1
+    condition = i < strLength
+    while (condition)
+    {
+      count = count + increment
+      increment = increment + increment
+    }
+    return count
+	}
+}

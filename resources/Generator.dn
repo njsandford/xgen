@@ -38,6 +38,8 @@ interface Generator {
 
 	Option getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource, FeatureBuilder fb)
 
+	int getApproxSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
+
 	//int countOptions(FunctionPrototype fp, int lineCount)
 	//int getIndexOf(FunctionPrototype fp, int lineCount, Option o)
 	//Option getOptionAt(FunctionPrototype fp, int lineCount, int index)

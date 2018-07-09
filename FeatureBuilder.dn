@@ -504,7 +504,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
       // If declarations are finished, no more can be done, so check if all are correct.
       return false
     }
-    if (providedFeatures.asmtTypes.literalValue != null && (current.asmtTypes.literalValue != providedFeatures.asmtTypes.literalValue)) {
+    if (providedFeatures.asmtTypes.literalValue != null && current.asmtTypes.literalValue != null && (current.asmtTypes.literalValue != providedFeatures.asmtTypes.literalValue)) {
       return false
     }
     if (linesRemaining == 0) {

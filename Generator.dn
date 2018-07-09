@@ -1395,22 +1395,24 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			{
 				//all declarations of new variables, of every possible type
 				// NOTE: modify this so if noDeclarations == false, ONLY generate declarations!
-				if (!noDeclarations)
-				result = new Operation[](result, generateDeclarations(ins, paramTypes))
+				if (!noDeclarations) {
+					result = new Operation[](result, generateDeclarations(ins, paramTypes))
+				}
+				else {
+					//all assignments of any in-scope variable to X (where X is any in-scope variable, or any function call, or any literal from a subsampled set of options)
+					// - function parameters will need every option from X, up to a max. nesting depth
+					result = new Operation[](result, generateAssignments(ins))
 
-				//all assignments of any in-scope variable to X (where X is any in-scope variable, or any function call, or any literal from a subsampled set of options)
-				// - function parameters will need every option from X, up to a max. nesting depth
-				result = new Operation[](result, generateAssignments(ins))
+					//all function calls on objects (not using their return values)
+					result = new Operation[](result, generateLocalObjectCalls(ins))
 
-				//all function calls on objects (not using their return values)
-				result = new Operation[](result, generateLocalObjectCalls(ins))
+					//all return options (TODO)
 
-				//all return options (TODO)
+					//all calls of local functions (TODO)
 
-				//all calls of local functions (TODO)
-
-				//all control flow blocks, using X (boolean) in its header, of every possible length from 1 to (max_lines - here)
-				result = new Operation[](result, generateControlBlocks(ins, remainingLines))
+					//all control flow blocks, using X (boolean) in its header, of every possible length from 1 to (max_lines - here)
+					result = new Operation[](result, generateControlBlocks(ins, remainingLines))
+				}
 
 			}
 			//blank lines (note, there's no point creating these for sub-scopes, as these are already length-controlled separately)
@@ -1428,7 +1430,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			Operation ops[] = generateOperations(n.inScope, remainingLines, n.declarationsComplete, n.blankLines, outerScope, featureBuilder.getParameterTypes())
 			for (int j = 0; j < ops.arrayLength; j++)
 			{
-				/* out.println("Option $(iu.intToString(j)): $(ops[j].line), lineType: $(iu.intToString(ops[j].lineType)), decType: $(iu.intToString(ops[j].decType)), asmtType: $(iu.intToString(ops[j].asmtType))") */
+				/*  ("Option $(iu.intToString(j)): $(ops[j].line), lineType: $(iu.intToString(ops[j].lineType)), decType: $(iu.intToString(ops[j].decType)), asmtType: $(iu.intToString(ops[j].asmtType))") */
 
 				char newLine[] = makeNewLine(ops[j]) // NOTE: This is the string line of code!
 
@@ -1633,15 +1635,15 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					/* }
 					else rejectBranch = true */
 
-					if (!rejectBranch)// (!rejectEarly && programIsReachable)
+					if (rejectBranch)// (!rejectEarly && programIsReachable)
 					{
 						//options[i].features = previousFeatures
 						//start.features = previousFeatures
 
 						testsFailed ++
 
-						/* if (testsFailed % 100 == 0 && addReturn) */
-						/* { */
+						if (testsFailed % 100 == 0 && addReturn)
+						{
 							//out.println("ACL: $(iu.intToString(start.lines.arrayLength))")
 							int currentLines[] = options[i].lines
 							currentLines = new int[](start.lines, set)
@@ -1661,7 +1663,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 								if (lines[j].string == options[i].lineInfo.line) out.println(" << --")
 								else out.println("")
 						  }
-						/* } */
+						}
 					}
 
 					/* if (!rejectEarly && programIsReachable) { */
@@ -1979,6 +1981,35 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			}
 		}
 
+		int Generator:getApproxSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
+		{
+			PermutationSet ps = new PermutationSet(lineCount, lineCount, maxOptions)
+
+			testFunction = fp
+			featureBuilder.setParameterTypes(fp.parameterTypes)
+
+			int ins[] = null
+
+			for (int i = 0; i < fp.parameterTypes.arrayLength; i++)
+			{
+				ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
+			}
+
+			// NOTE: specify at the start whether or not to do any variable declarations
+			bool declarationsComplete = false
+			if (featureBuilder.totalVarsRequired() == 0) declarationsComplete == true
+
+			Node root = new Node(null, !declarationsComplete, ins)
+
+			// NOTE: pass feature vector here:
+			/* Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, lineCount, true, featureBuilder) */
+			Node options[] = buildNextLine(root, lineCount, true, featureBuilder)
+
+			/* OptionSet result = new OptionSet(options, ps.nextNode) */
+
+			return options.arrayLength
+		}
+
 		//NOTE pass feature vector here!
 		OptionSet Generator:getOptions(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
@@ -2071,10 +2102,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				else
 				options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null, fp.parameterTypes)
 
-				out.println("options: $(iu.intToString(options.arrayLength)), leaf line: $(iu.intToString(i)), line val: $(iu.intToString(leaf.lines[i]))")
+				/* out.println("options: $(iu.intToString(options.arrayLength)), leaf line: $(iu.intToString(i)), line val: $(iu.intToString(leaf.lines[i]))")
 				for (int j = 0; j < options.arrayLength; j++) {
 					out.println("option $(iu.intToString(j)): $(options[j].line)")
-				}
+				} */
 				Operation choice = options[leaf.lines[i]]
 
 				if (choice.newVar == null) declarationsComplete = true

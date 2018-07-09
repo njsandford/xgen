@@ -1,0 +1,3 @@
+interface IntStringFunction {
+	int function(char str[])
+	}

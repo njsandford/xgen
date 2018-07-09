@@ -1,0 +1,8 @@
+{
+"tests" :
+[
+{"function" : "function", "link" : false, "return" : "5", "params" : {"a": "hello"}},
+{"function" : "function", "link" : false, "return" : "16", "params" : {"a": "this is a string"}},
+{"function" : "function", "link" : false, "return" : "18", "params" : {"a": "longwordteststring"}}
+]
+}

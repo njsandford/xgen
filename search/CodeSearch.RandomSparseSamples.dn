@@ -29,7 +29,7 @@ component provides CodeSearch:RandomSparseSamples requires io.Output out, data.I
 			//foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, ops.options[0]))
 
 			Option q = generator.getRandomOption(functionList[i].prototype, functionList[i].lineCount, randomInt, featureBuilder)
-			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, q))
+			foundFunctions[i] = new FunctionSource(generator.decodeOption(functionList[i].prototype, q, featureBuilder))
 			}
 
 		return foundFunctions
@@ -86,7 +86,7 @@ component provides CodeSearch:RandomSparseSamples requires io.Output out, data.I
 			{
 			Option o = generator.getRandomOption(spec.prototype, spec.lineCount, rgen, featureBuilder)
 
-			String function[] = generator.decodeOption(spec.prototype, o)
+			String function[] = generator.decodeOption(spec.prototype, o, featureBuilder)
 			functions[functionIndex] = new FunctionSource(function)
 
 			String compsrc[] = testSystem.makeComponentSource(src)

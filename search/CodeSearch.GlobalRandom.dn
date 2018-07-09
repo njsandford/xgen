@@ -102,6 +102,11 @@ component provides CodeSearch:GlobalRandom requires io.Output out, data.IntUtil 
 
 			FunctionData nfc = functionList[i]
 
+			int worstCaseSearchSpaceSize[] = generator.worstCaseSearchSpaceSize(nfc.prototype, nfc.lineCount, 0, null, featureBuilder)
+			for (int j = 0; j < worstCaseSearchSpaceSize.arrayLength - 1; j++) {
+				out.println("Options for line $(iu.intToString(j + 1)): $(iu.intToString(worstCaseSearchSpaceSize[j]))")
+			}
+
 			ops = generator.getOptions(nfc.prototype, nfc.lineCount, 0, null, featureBuilder)
 
 			fsets = new OptionSet[](fsets, ops)

@@ -152,7 +152,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		char unitTests[] = "input_string_reverse.txt"
 		char testProgram[] = "UnitTest_String_Reverse.o"
 		char buildInterface[] = "StringStringFunction"
-		int lineCount = 5
+		int lineCount = 1
 
 		/* char unitTests[] = "input_string_arr_count.txt"
 		char testProgram[] = "UnitTest_String_Arr_Count.o"

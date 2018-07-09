@@ -1981,8 +1981,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			}
 		}
 
-		int Generator:getApproxSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
+		int[] Generator:worstCaseSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
+			int lineOptions[]
+
 			PermutationSet ps = new PermutationSet(lineCount, lineCount, maxOptions)
 
 			testFunction = fp
@@ -2001,13 +2003,21 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 			Node root = new Node(null, !declarationsComplete, ins)
 
-			// NOTE: pass feature vector here:
-			/* Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, lineCount, true, featureBuilder) */
-			Node options[] = buildNextLine(root, lineCount, true, featureBuilder)
+			Node nextNode = root
+			// For each line of program, calculate the number of options available.
+			for (int i = lineCount; i > 0; i++) {
+				Node currentNode = clone nextNode
+				Node options[] = buildNextLine(nextNode, i, true, featureBuilder)
+				Operation lineInfo = options[0].lineInfo
+				nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead.
+				nextNode.features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
+				lineOptions = new int[](lineOptions, options.arrayLength)
+			}
+			// Get return options:
+			Node returnOptions[] = buildReturns(nextNode, fp.returnType)
+			lineOptions = new int[](lineOptions, returnOptions.arrayLength)
 
-			/* OptionSet result = new OptionSet(options, ps.nextNode) */
-
-			return options.arrayLength
+			return lineOptions
 		}
 
 		//NOTE pass feature vector here!

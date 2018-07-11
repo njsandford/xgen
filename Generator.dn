@@ -1569,18 +1569,18 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			/* Node previousNode = clone start */
 
 			/* int linesRemaining = globalLineCount - 1 */
-			out.println("root declarationsComplete: $(iu.intToString(start.declarationsComplete))")
+			/* out.println("root declarationsComplete: $(iu.intToString(start.declarationsComplete))") */
 			if (lineCount > 0)
 			{
 				int linesRemaining = globalLineCount - 1
 
 				Node options[] = buildNextLine(start, lineCount, addReturn, featureBuilder)
 				//Node options[] = buildTree_summary(start, lineCount)
-				out.println("Options: $(iu.intToString(options.arrayLength))")
-				for (int i = 0; i < options.arrayLength; i++)
+				/* out.println("Options: $(iu.intToString(options.arrayLength))") */
+				/* for (int i = 0; i < options.arrayLength; i++)
 				{
 					out.println("$(iu.intToString(i)): $(options[i].lineInfo.line)")
-				}
+				} */
 				int offset = 0
 
 				if (fastForward != null)
@@ -1624,10 +1624,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
 					/* out.println("literal val: $(lineInfo.rhsAssign)") */
 					/* options[i].features = featureBuilder.copyFeatures(newFeatures) */
-					out.println("before declarationsComplete: $(iu.intToString(options[i].declarationsComplete))")
+					/* out.println("before declarationsComplete: $(iu.intToString(options[i].declarationsComplete))") */
 					if ((!options[i].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[i].features.totalVars))) options[i].declarationsComplete = true
 					/* else options[i].declarationsComplete = false */
-					out.println("after declarationsComplete: $(iu.intToString(options[i].declarationsComplete))")
+					/* out.println("after declarationsComplete: $(iu.intToString(options[i].declarationsComplete))") */
 
 					bool rejectBranch //= false
 					//if (options[i].features != null) {
@@ -1635,7 +1635,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					/* }
 					else rejectBranch = true */
 
-					if (rejectBranch)// (!rejectEarly && programIsReachable)
+					/* if (rejectBranch)// (!rejectEarly && programIsReachable)
 					{
 						//options[i].features = previousFeatures
 						//start.features = previousFeatures
@@ -1664,7 +1664,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 								else out.println("")
 						  }
 						}
-					}
+					} */
 
 					/* if (!rejectEarly && programIsReachable) { */
 					if (!rejectBranch)//(!rejectEarly && programIsReachable)

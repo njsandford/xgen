@@ -1983,7 +1983,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 		int[] Generator:worstCaseSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
-			int lineOptions[]
+			out.println("... calculating worst case search space size ...")
+			int lineOptions[] = new int[]
 
 			PermutationSet ps = new PermutationSet(lineCount, lineCount, maxOptions)
 
@@ -2002,20 +2003,39 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			if (featureBuilder.totalVarsRequired() == 0) declarationsComplete == true
 
 			Node root = new Node(null, !declarationsComplete, ins)
-
+			int j
 			Node nextNode = root
 			// For each line of program, calculate the number of options available.
-			for (int i = lineCount; i > 0; i++) {
+			for (int i = lineCount; i > 0; i--) {
 				Node currentNode = clone nextNode
 				Node options[] = buildNextLine(nextNode, i, true, featureBuilder)
-				Operation lineInfo = options[0].lineInfo
-				nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead.
-				nextNode.features = featureBuilder.updateFeatureVector(currentNode.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
-				lineOptions = new int[](lineOptions, options.arrayLength)
+
+				int linesRemaining = i
+				Node accepted[] = new Node[]
+				for (int n = 0; n < options.arrayLength; n++)
+				{
+					/* linesRemaining -- */
+					Operation lineInfo = options[n].lineInfo
+					/* nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead. */
+					options[n].features = featureBuilder.updateFeatureVector(options[n].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
+					if ((!options[n].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[n].features.totalVars))) options[n].declarationsComplete = true
+
+					if (!featureBuilder.rejectBranch(options[n].features, options[n].declarationsComplete, linesRemaining))
+					{
+						accepted = new Node[](accepted, options[n]) // Accepted option, add to array
+					}
+				}
+
+				nextNode = accepted[0] // Use the first accepted branch, as there will be no best/worst case.
+
+				lineOptions = new int[](lineOptions, accepted.arrayLength)
+				out.println("Options for line $(iu.intToString(j)): $(iu.intToString(accepted.arrayLength))/$(iu.intToString(options.arrayLength))")
+				j++
 			}
 			// Get return options:
 			Node returnOptions[] = buildReturns(nextNode, fp.returnType)
-			lineOptions = new int[](lineOptions, returnOptions.arrayLength)
+			/* lineOptions = new int[](lineOptions, returnOptions.arrayLength) */
+			out.println("Return options: $(iu.intToString(returnOptions.arrayLength))")
 
 			return lineOptions
 		}

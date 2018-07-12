@@ -1590,7 +1590,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					offset = fastForward.lines[ps.totalLines - lineCount]
 				}
 				int endInd = options.arrayLength
-				if (!start.declarationsComplete) endInd = 13
+				/* if (!start.declarationsComplete) endInd = 13 */
 
 				/* PIFixed previousFeatures = clone start.features */
 				//for (int i = 0; i < options.arrayLength; i++)
@@ -1609,6 +1609,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					//  - Maybe should first check if declarations are finished, and if so, do a reachability test?
 					// 	-
 					/* Node currentNode = options[i] */
+					/* out.println("Options length: $(iu.intToString(options.arrayLength)), index no: $(iu.intToString(i))") */
 					Operation lineInfo = options[i].lineInfo
 
 					/* PIFixed previousFeatures = options[i].features */
@@ -1872,6 +1873,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			{
 				//add return statements, for every possible variable that matches our return type...
 				Node options[] = buildReturns(start, returnType)
+				out.println("Original return options length: $(iu.intToString(options.arrayLength))")
 
 				int ndx = rgen.get(options.arrayLength)
 
@@ -2003,41 +2005,80 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			if (featureBuilder.totalVarsRequired() == 0) declarationsComplete == true
 
 			Node root = new Node(null, !declarationsComplete, ins)
-			int j
+			int j = 0
 			Node nextNode = root
 			// For each line of program, calculate the number of options available.
-			for (int i = lineCount; i > 0; i--) {
+			for (int i = lineCount; i > 0; i--)
+			{
+				/* out.println("current line no: $(iu.intToString(i))") */
 				Node currentNode = clone nextNode
-				Node options[] = buildNextLine(nextNode, i, true, featureBuilder)
+				Node accepted[] = getAcceptedOptions(nextNode, i, true, featureBuilder, fp)
 
-				int linesRemaining = i
-				Node accepted[] = new Node[]
-				for (int n = 0; n < options.arrayLength; n++)
+				if (i == 1)
 				{
-					/* linesRemaining -- */
-					Operation lineInfo = options[n].lineInfo
-					/* nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead. */
-					options[n].features = featureBuilder.updateFeatureVector(options[n].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
-					if ((!options[n].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[n].features.totalVars))) options[n].declarationsComplete = true
-
-					if (!featureBuilder.rejectBranch(options[n].features, options[n].declarationsComplete, linesRemaining))
+					nextNode = accepted[0] // doesn't matter which options is chosen as the last option, as there will be no further options.
+				}
+				else
+				{
+					// Find worst next option:
+					Node currentOption
+					int worstOptionIndex
+					Node currentOptions[]
+					Node worstOptions[]
+					for (int x = 0; x < accepted.arrayLength; x++)
 					{
-						accepted = new Node[](accepted, options[n]) // Accepted option, add to array
+						currentOption = clone accepted[x]
+						/* out.println("next line no: $(iu.intToString(i - 1))") */
+						currentOptions = getAcceptedOptions(currentOption, i - 1, true, featureBuilder, fp)
+						/* out.println("worstOptions len: $(iu.intToString(worstOptions.arrayLength)), worstOptionIndex: $(iu.intToString(worstOptionIndex)), currentOptions len: $(iu.intToString(currentOptions.arrayLength))") */
+						if (worstOptions.arrayLength == 0 || currentOptions.arrayLength > worstOptions.arrayLength)
+						{
+							worstOptions = currentOptions
+							worstOptionIndex = x
+						}
 					}
+					nextNode = accepted[worstOptionIndex]
 				}
 
-				nextNode = accepted[0] // Use the first accepted branch, as there will be no best/worst case.
+				/* nextNode = accepted[0] // Use the first accepted branch, as there will be no best/worst case. */
 
 				lineOptions = new int[](lineOptions, accepted.arrayLength)
-				out.println("Options for line $(iu.intToString(j)): $(iu.intToString(accepted.arrayLength))/$(iu.intToString(options.arrayLength))")
+				out.println("Options for line $(iu.intToString(j)): $(iu.intToString(accepted.arrayLength))")///$(iu.intToString(options.arrayLength))")
 				j++
 			}
 			// Get return options:
 			Node returnOptions[] = buildReturns(nextNode, fp.returnType)
 			/* lineOptions = new int[](lineOptions, returnOptions.arrayLength) */
-			out.println("Return options: $(iu.intToString(returnOptions.arrayLength))")
+			out.println("Return options for line $(iu.intToString(j)): $(iu.intToString(returnOptions.arrayLength))")
+			out.println("Total accepted options: $(iu.intToString(featureBuilder.acceptedBranches()))")
+			featureBuilder.resetAcceptedRejectedBranches()
 
 			return lineOptions
+		}
+
+		Node[] getAcceptedOptions(Node root, int linesRemaining, bool outerScope, FeatureBuilder featureBuilder, FunctionPrototype fp) {
+			Node options[] = buildNextLine(root, linesRemaining, outerScope, featureBuilder)
+
+			Node accepted[] = new Node[]
+			for (int n = 0; n < options.arrayLength; n++)
+			{
+				/* linesRemaining -- */
+				Operation lineInfo = options[n].lineInfo
+				/* nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead. */
+				options[n].features = featureBuilder.updateFeatureVector(options[n].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
+				if ((!options[n].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[n].features.totalVars))) options[n].declarationsComplete = true
+
+				if (!featureBuilder.rejectBranch(options[n].features, options[n].declarationsComplete, linesRemaining))
+				{
+					accepted = new Node[](accepted, options[n]) // Accepted option, add to array
+				}
+			}
+
+			/* for (int j = 0; j < accepted.arrayLength; j++) {
+				out.println("option $(iu.intToString(j)): $(decodeOption(fp, accepted[j], featureBuilder))")
+			} */
+
+			return accepted
 		}
 
 		//NOTE pass feature vector here!
@@ -2128,14 +2169,20 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 				//check if it's time to generate a return value
 				if (top.remainingLines == 0 && top.next == null)
-				options = generateReturns(top.ins, fp.returnType)
+				{
+					options = generateReturns(top.ins, fp.returnType)
+					/* out.println("Return Options length: $(iu.intToString(options.arrayLength))") */
+				}
 				else
-				options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null, fp.parameterTypes)
-
+				{
+					options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null, fp.parameterTypes)
+					/* out.println("Normal options length: $(iu.intToString(options.arrayLength))") */
+				}
 				/* out.println("options: $(iu.intToString(options.arrayLength)), leaf line: $(iu.intToString(i)), line val: $(iu.intToString(leaf.lines[i]))")
 				for (int j = 0; j < options.arrayLength; j++) {
 					out.println("option $(iu.intToString(j)): $(options[j].line)")
 				} */
+				/* out.println("Options lenght: $(iu.intToString(options.arrayLength)), index no: $(iu.intToString(leaf.lines[i])), leaf lines length: $(iu.intToString(leaf.lines.arrayLength)), leaf index no: $(iu.intToString(i))") */
 				Operation choice = options[leaf.lines[i]]
 
 				if (choice.newVar == null) declarationsComplete = true

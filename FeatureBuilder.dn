@@ -63,6 +63,17 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     return providedFeatures.totalVars
   }
 
+  int FeatureBuilder:acceptedBranches() {
+    return acceptedBranches
+  }
+
+  void FeatureBuilder:resetAcceptedRejectedBranches() {
+    acceptedBranches = 0
+    rejectedBranches = 0
+    acceptedPrograms = 0
+    rejectedPrograms = 0
+  }
+
   /* update the assignment type counts */
   AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType, char rhsAssign[]) {
     AssignmentTypes ats = clone asmtTypes

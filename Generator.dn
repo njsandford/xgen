@@ -15,13 +15,20 @@ data DataType {
 data Node extends Option
 {
 	int inScope[]
-	SearchScope subLines[]
+	SearchScope subLines
 	bool declarationsComplete // Very useful for feature building: can do a check that enough/not too many variables exist to make the FV reachable.
 	bool blankLines
 	Operation lineInfo // Stores information about the current line for this node
 	PIFixed features
 	bool firstPostDec
+	Node optionsCache[]
 }
+
+data NodeSet {
+	Node options[]
+	int start
+	int length
+	}
 
 data PermutationSet {
 	int totalLines
@@ -1354,42 +1361,43 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		}
 
 		Operation[] generateControlBlocks(int ins[], int remainingLines)
-		{
+			{
 			Operation result[]
 
 			if (remainingLines <= 1)
-			return null
+				return null
 
 			Type boolType = getType("bool").type
 
-			for (int i = 0; i < ins.arrayLength; i++)
-			{
-				if (typesMatch(boolType, types[ins[i]].type))
+			//generate every control flow block for every line length
+			for (int j = 1; j < remainingLines; j++)
 				{
-					//generate every control flow block for every line length
-
-					// - if statements
-					for (int j = 1; j < remainingLines; j++)
+				for (int i = 0; i < ins.arrayLength; i++)
 					{
+					if (typesMatch(boolType, types[ins[i]].type))
+						{
+						// - if statements
+
 						result = new Operation[](result, new Operation(null, "if (locv_$(iu.intToString(i)))", 3, j))
-					}
 
-					// - while loops
-					for (int j = 1; j < remainingLines; j++)
-					{
+						// - while loops
+
 						result = new Operation[](result, new Operation(null, "while (locv_$(iu.intToString(i)))", 4, j))
-					}
 
-					//NOTE: we may want to add " == false" versions too...
+						//NOTE: we may want to add " == false" versions too...
+						}
+					}
 				}
-			}
 
 			return result
-		}
+			}
 
 		Operation[] generateOperations(int ins[], int remainingLines, bool noDeclarations, bool blank, bool outerScope, String paramTypes[])
 		{
 			Operation result[]
+
+			//blank lines (note, there's no point creating these for sub-scopes, as these are already length-controlled separately)
+			if (outerScope) result = new Operation[](result, new Operation(null, null, 0))
 
 			if (!blank)
 			{
@@ -1415,17 +1423,32 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				}
 
 			}
-			//blank lines (note, there's no point creating these for sub-scopes, as these are already length-controlled separately)
-			if (outerScope) result = new Operation[](result, new Operation(null, null, 0))
 
 			return result
 		}
 
 		// NOTE: convert operations to nodes -- modify this! could a node include an operation?
 		// Maybe this is where the feature builder should be called to build features for each node? (instead of in buildLines)
-		Node[] buildNextLine(Node n, int remainingLines, bool outerScope, FeatureBuilder featureBuilder) // , FeatureVector features) // Add the featureVector to compare current program to.
+		NodeSet buildNextLine(Node n, int remainingLines, bool outerScope, FeatureBuilder featureBuilder) // , FeatureVector features) // Add the featureVector to compare current program to.
 		{
 			Node result[]
+
+			if (n.declarationsComplete && n.optionsCache != null)
+				{
+				//return a NodeSet, including a list size
+				// - set this list size by scanning from the end and removing 1 for every option with subLines above remainingLines
+				// - (note, we could perform a direct calculation here if we knew on what line number the cache was created...?)
+				int length = n.optionsCache.arrayLength
+				int start = 0
+
+				if (n.blankLines) length = 1
+				if (!outerScope) start = 1
+
+				while (n.optionsCache[length-1].subLines != null && n.optionsCache[length-1].subLines.subLinesCount > (remainingLines-1))
+					length --
+
+				return new NodeSet(n.optionsCache, start, length)
+				}
 
 			Operation ops[] = generateOperations(n.inScope, remainingLines, n.declarationsComplete, n.blankLines, outerScope, featureBuilder.getParameterTypes())
 			for (int j = 0; j < ops.arrayLength; j++)
@@ -1446,15 +1469,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					newdec = true
 				}
 
-				SearchScope newss[]
+				SearchScope newss = null
 
-				if (ops[j].subLinesCount > 0) {
-					newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, false, newins), ops[j].subLinesCount))
-					//newlt = // This indicates that it is a control block?
-				}
-				else {
-					newss = n.subLines
-				}
+				if (ops[j].subLinesCount > 0)
+					newss = new SearchScope(new Node(null, false, newins, null, true), ops[j].subLinesCount)
 
 				/* Node newNode = clone n */
 				Node newNode = new Node()
@@ -1491,7 +1509,15 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				result = new Node[](result, newNode)
 			}
 
-			return result
+			if (n.declarationsComplete)
+				{
+				for (int i = 0; i < result.arrayLength; i++)
+					{
+					result[i].optionsCache = result
+					}
+				}
+
+			return new NodeSet(result, 0, result.arrayLength)
 		}
 
 		Node[] buildReturns(Node n, char returnType[])
@@ -1511,12 +1537,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				else
 				newins = new int[](n.inScope, ops[j].newVar.typeIndex)
 
-				SearchScope newss[]
+				SearchScope newss = null
 
 				if (ops[j].subLinesCount > 0)
-				newss = new SearchScope[](n.subLines, new SearchScope(new Node(null, false, newins), ops[j].subLinesCount))
-				else
-				newss = n.subLines
+					newss = new SearchScope(new Node(null, false, newins), ops[j].subLinesCount)
 
 				Node newNode = new Node(null, false, newins)
 				newNode.subLines = newss
@@ -1560,7 +1584,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 		//NOTE: this function operates by "return" purely because adding to a global array within "ps" is super slow
 		// (as it tends to expand an already-big array, rather than expanding incrementally smaller arrays as it goes)
-		Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, int globalLineCount, bool addReturn, FeatureBuilder featureBuilder)
+		Node[] buildLines(PermutationSet ps, Node fastForward, bool globalFF, Node start, char returnType[], int lineCount, int globalLineCount, bool addReturn, FeatureBuilder featureBuilder, PIFixed ori_features)
 		{
 			Node programs[]
 			//int linesRemaining = ps.totalLines - lineCount // NOT lines remaining - more like lines used?
@@ -1574,29 +1598,31 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			{
 				int linesRemaining = globalLineCount - 1
 
-				Node options[] = buildNextLine(start, lineCount, addReturn, featureBuilder)
+				NodeSet opSet = buildNextLine(start, lineCount, addReturn, featureBuilder)
+				Node options[] = opSet.options
+
 				//Node options[] = buildTree_summary(start, lineCount)
 				/* out.println("Options: $(iu.intToString(options.arrayLength))") */
 				/* for (int i = 0; i < options.arrayLength; i++)
 				{
 					out.println("$(iu.intToString(i)): $(options[i].lineInfo.line)")
 				} */
-				int offset = 0
+				int offset = opSet.start
 
 				if (fastForward != null)
-				{
+					{
 					//discount all of the options before the FF point
-					options = removeFirstCells(options, fastForward.lines[ps.totalLines - lineCount])
-					offset = fastForward.lines[ps.totalLines - lineCount]
-				}
+					offset = fastForward.lines[globalLineCount]+opSet.start
+					}
+
 				int endInd = options.arrayLength
 				/* if (!start.declarationsComplete) endInd = 13 */
 
 				/* PIFixed previousFeatures = clone start.features */
 				//for (int i = 0; i < options.arrayLength; i++)
-				for (int i = 0; i < endInd; i++)
-				{
-					int set = offset+i
+				for (int i = offset; i < opSet.length; i++)
+					{
+					int set = i - opSet.start
 
 					// NOTE: Compute similarity/distance to feature vector
 					// Things we can pass to feature builder from here:
@@ -1622,7 +1648,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, linesRemaining) */
 
 					//PIFixed newFeatures
-					options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
+					options[i].features = featureBuilder.updateFeatureVector(ori_features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
 					/* out.println("literal val: $(lineInfo.rhsAssign)") */
 					/* options[i].features = featureBuilder.copyFeatures(newFeatures) */
 					/* out.println("before declarationsComplete: $(iu.intToString(options[i].declarationsComplete))") */
@@ -1657,7 +1683,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							for (int j = 0; j < lineCount; j++) {
 								currentLines = new int[](currentLines, 0)
 							}
-							String lines[] = decodeOption(testFunction, options[i], featureBuilder)
+							//options[i]
+							String lines[] = decodeOption(testFunction, new Node(currentLines), featureBuilder)
 							out.println("")
 						  for (int j = 0; j < lines.arrayLength; j++) {
 						  	out.print(lines[j].string)
@@ -1674,6 +1701,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						// Decide if the current program is reachable - if not, don't continue.
 						// return ???
 
+						PIFixed features = options[i].features
+
 						options[i].lines = new int[](start.lines, set)
 
 						//ps.lineIndex ++
@@ -1682,13 +1711,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						//int continueGlobalLineCount = linesRemaining
 
 						//check for a sub-scope, and populate it if existing
-						if (options[i].subLines.arrayLength != start.subLines.arrayLength)
+						if (options[i].subLines != null)
 						{
-							SearchScope sc = options[i].subLines[start.subLines.arrayLength]
+							SearchScope sc = options[i].subLines
 							sc.subLinesStart = options[i].lines.arrayLength
 
 							PermutationSet subps = new PermutationSet(sc.subLinesCount, ps.globalLines, ps.totalLines - lineCount, 1)
-							sc.root.features = options[i].features
+							sc.root.optionsCache = options
 
 							bool subGlobalFF = false
 
@@ -1708,21 +1737,15 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							while (moreOptions)
 							{
 								subps.found = 0
-								Node subOption[] = buildLines(subps, subps.nextNode, subGlobalFF, sc.root, returnType, sc.subLinesCount, linesRemaining, false, featureBuilder)
+								Node subOption[] = buildLines(subps, subps.nextNode, subGlobalFF, sc.root, returnType, sc.subLinesCount, linesRemaining, false, featureBuilder, features)
 
 								if (subOption != null)
 								{
-									//append the lines immediately from subps' only option
-									Node optionN = clone options[i]
-
-									// Do a feature update here too?
-
-									optionN.lines = new int[](options[i].lines, subOption[0].lines)
-									optionN.features = subOption[0].features
+									PIFixed subFeatures = subOption[0].features
 
 									//continue to populate the next line of code after the sub-scope
 									// - the use of globalFF here is really strange to work out: what it's saying is, if I'm in a sub-scope already, an we're in a fast-forward, do NOT mess with the last line of this sub-scope, because the "resume" point of a fast-forward is ALWAYS from the last line of the function (i.e. the return); nothing else is allowed to move -- because last-line-returns completely ignore globalFF, this only gets noticed if we're on the last line of a sub-scope, where we *don't* want to skip the option
-									Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, subGLCount, addReturn, featureBuilder)
+									Node childOptions[] = buildLines(ps, fastForward, globalFF, options[i], returnType, continueLineCount, subGLCount, addReturn, featureBuilder, subFeatures)
 
 									if (childOptions != null) {
 										programs = new Node[](programs, childOptions)
@@ -1747,7 +1770,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							optionN.features = featureBuilder.copyFeatures(options[i].features)
 							/* Node optionN = clone options[i] */
 							//continue to populate the next line of code
-							Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, linesRemaining, addReturn, featureBuilder)
+							Node childOptions[] = buildLines(ps, fastForward, globalFF, optionN, returnType, continueLineCount, linesRemaining, addReturn, featureBuilder, optionN.features)
 
 							if (childOptions != null) {
 								programs = new Node[](programs, childOptions)
@@ -1791,13 +1814,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					Operation lineInfo = currentNode.lineInfo
 					// Shouldn't need to update again here, just using existing features, return doens't add anything
 					/* options[i].features = featureBuilder.updateFeatureVector(start.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType) */
-					bool programClosenessCheck = featureBuilder.programHasMinimumFeatures(options[i].features, 0)//true//featureBuilder.isProgramSimilar(options[i].features)
+					bool programClosenessCheck = featureBuilder.programHasMinimumFeatures(ori_features, 0)//true//featureBuilder.isProgramSimilar(options[i].features)
 
 					// Replace this with a check to find if all features are included.
 					if (programClosenessCheck) {
 
-						options[i].lines = new int[](start.lines, set)
-						selection = new Node[](selection, options[i])
+						selection = new Node[](selection, new Node(new int[](start.lines, set)))
 
 						ps.found ++
 
@@ -1823,11 +1845,15 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 					//ps.nodes = new Node[](ps.nodes, start)
 
+					Node newNode = new Node(start.lines)
+
 					ps.found = 1
 
-					ps.nextNode = start
+					ps.nextNode = newNode
 
-					return start
+					newNode.features = ori_features
+
+					return newNode
 				}
 			}
 
@@ -1838,12 +1864,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		{
 			if (lineCount > 0)
 			{
-				Node options[] = buildNextLine(start, lineCount, addReturn, featureBuilder)
+				NodeSet opSet = buildNextLine(start, lineCount, addReturn, featureBuilder)
+				Node options[] = opSet.options
 
 				if (options == null)
 				return null
 
-				int ndx = rgen.get(options.arrayLength)
+				int ndx = rgen.get(opSet.length)
 
 				Node nxt = options[ndx]
 
@@ -1851,9 +1878,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 				int continueLineCount = lineCount - 1
 
-				if (nxt.subLines.arrayLength != start.subLines.arrayLength)
+				if (nxt.subLines != null)
 				{
-					SearchScope sc = nxt.subLines[start.subLines.arrayLength]
+					SearchScope sc = nxt.subLines
 					sc.subLinesStart = nxt.lines.arrayLength
 
 					continueLineCount -= sc.subLinesCount
@@ -2007,12 +2034,26 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			Node root = new Node(null, !declarationsComplete, ins)
 			int j = 0
 			Node nextNode = root
+			Node worstOptions[]
 			// For each line of program, calculate the number of options available.
 			for (int i = lineCount; i > 0; i--)
 			{
 				/* out.println("current line no: $(iu.intToString(i))") */
 				Node currentNode = clone nextNode
-				Node accepted[] = getAcceptedOptions(nextNode, i, true, featureBuilder, fp)
+
+				if (i == lineCount)
+				{
+					worstOptions = getAcceptedOptions(nextNode, i, true, featureBuilder, fp)
+				}
+				Node accepted[] = worstOptions
+				for (int n = 0; n < worstOptions.arrayLength; n++)
+				{
+					out.println("option $(iu.intToString(n)): $(worstOptions[n].lineInfo.line)")
+				}
+				/* else
+				{
+					accepted = worstOptions
+				} */
 
 				if (i == 1)
 				{
@@ -2024,7 +2065,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					Node currentOption
 					int worstOptionIndex
 					Node currentOptions[]
-					Node worstOptions[]
+					worstOptions = null
 					for (int x = 0; x < accepted.arrayLength; x++)
 					{
 						currentOption = clone accepted[x]
@@ -2057,10 +2098,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		}
 
 		Node[] getAcceptedOptions(Node root, int linesRemaining, bool outerScope, FeatureBuilder featureBuilder, FunctionPrototype fp) {
-			Node options[] = buildNextLine(root, linesRemaining, outerScope, featureBuilder)
+			NodeSet opSet = buildNextLine(root, linesRemaining, outerScope, featureBuilder)
+			Node options[] = opSet.options
 
 			Node accepted[] = new Node[]
-			for (int n = 0; n < options.arrayLength; n++)
+			for (int n = opSet.start; n < opSet.length; n++)
 			{
 				/* linesRemaining -- */
 				Operation lineInfo = options[n].lineInfo
@@ -2104,7 +2146,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			Node root = new Node(null, !declarationsComplete, ins)
 
 			// NOTE: pass feature vector here:
-			Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, lineCount, true, featureBuilder)
+			Node options[] = buildLines(ps, resumeFrom, false, root, fp.returnType, lineCount, lineCount, true, featureBuilder, null)
 
 			OptionSet result = new OptionSet(options, ps.nextNode)
 

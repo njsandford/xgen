@@ -5,6 +5,8 @@ uses data.adt.Stack
 uses FunctionData
 uses Generator
 
+const int PRINT_FREQ = 500
+
 component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.Output output, data.IntUtil iu {
 
   /* FeatureBuilder:FeatureBuilder()
@@ -24,6 +26,8 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   int rejectedPrograms
   int acceptedBranches
   int rejectedBranches
+
+  int printCount
 
   String parameterTypes[]
 
@@ -465,15 +469,22 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     bool minLinesToComplete = hasMinLinesToCompleteFeatures(current, linesRemaining)
     bool areFeaturesReachable = areFeaturesReachable(current, declarationsComplete, linesRemaining)
     bool rejectEarly = rejectEarly(current, linesRemaining)
+
+	printCount ++
+
     if (rejectEarly || !minLinesToComplete || !areFeaturesReachable)
     {
       rejectedBranches += 1
-      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+
+	  if (printCount % PRINT_FREQ == 0)
+		output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return true
     }
     else {
       acceptedBranches += 1
-      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+
+	  if (printCount % PRINT_FREQ == 0)
+		output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return false
     }
   }
@@ -566,15 +577,23 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
     // If the features of the current node are similar enough to the provided feature vector, add it to tree.
     int proximityToProvidedProgram = distanceBetweenVectors(providedFeatures, features)
+
+	printCount ++
+
     // move this to FeatureBuilder
     if (proximityToProvidedProgram <= maxDeviation) {
       acceptedPrograms += 1
-      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+
+	  if (printCount % PRINT_FREQ == 0)
+		output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+
       return true
     }
     else {
       rejectedPrograms += 1
-      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+
+	  if (printCount % PRINT_FREQ == 0)
+		output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return false
     }
   }

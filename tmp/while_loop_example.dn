@@ -2,16 +2,16 @@ component provides Int_IntArray_Int_Function {
 
 	int Int_IntArray_Int_Function:function(int a[], int b)
 		{
-		int count
+		/* int count */
 		bool condition
 
-		condition = b == b
+		condition = false
 		while (condition)
 			{
-				count = b + b
+				condition = true
 			}
 
-		return count
+		return b
 		}
 
 	}

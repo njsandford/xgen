@@ -1664,7 +1664,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 					/* if (rejectBranch)// (!rejectEarly && programIsReachable)
 					{
-						//options[i].features = previousFeatures
+						out.println("rejected option $(iu.intToString(i)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[i].lineInfo.line)")
+					} */
+					/*	//options[i].features = previousFeatures
 						//start.features = previousFeatures
 
 						testsFailed ++
@@ -1694,9 +1696,14 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						}
 					} */
 
+					/* if (options[i].features.asmtTypes.totalVarToFunc > 0) {
+						out.println("VAR TO FUNC, option $(iu.intToString(i)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[i].lineInfo.line)")
+					} */
+
 					/* if (!rejectEarly && programIsReachable) { */
 					if (!rejectBranch)//(!rejectEarly && programIsReachable)
 					{
+						/* out.println("accepted option $(iu.intToString(i)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[i].lineInfo.line)") */
 						/* options[i].features = newFeatures */
 						// Decide if the current program is reachable - if not, don't continue.
 						// return ???
@@ -2034,7 +2041,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			Node root = new Node(null, !declarationsComplete, ins)
 			int j = 0
 			Node nextNode = root
-			Node worstOptions[]
+			Node worstOptions[] = new Node[]
 			// For each line of program, calculate the number of options available.
 			for (int i = lineCount; i > 0; i--)
 			{
@@ -2046,10 +2053,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					worstOptions = getAcceptedOptions(nextNode, i, true, featureBuilder, fp)
 				}
 				Node accepted[] = worstOptions
-				for (int n = 0; n < worstOptions.arrayLength; n++)
+				/* for (int n = 0; n < worstOptions.arrayLength; n++)
 				{
 					out.println("option $(iu.intToString(n)): $(worstOptions[n].lineInfo.line)")
-				}
+				} */
 				/* else
 				{
 					accepted = worstOptions
@@ -2072,7 +2079,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						/* out.println("next line no: $(iu.intToString(i - 1))") */
 						currentOptions = getAcceptedOptions(currentOption, i - 1, true, featureBuilder, fp)
 						/* out.println("worstOptions len: $(iu.intToString(worstOptions.arrayLength)), worstOptionIndex: $(iu.intToString(worstOptionIndex)), currentOptions len: $(iu.intToString(currentOptions.arrayLength))") */
-						if (worstOptions.arrayLength == 0 || currentOptions.arrayLength > worstOptions.arrayLength)
+						if (worstOptions.arrayLength == 0 || (worstOptions.arrayLength != 0 && currentOptions.arrayLength > worstOptions.arrayLength))
 						{
 							worstOptions = currentOptions
 							worstOptionIndex = x
@@ -2110,10 +2117,16 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				options[n].features = featureBuilder.updateFeatureVector(options[n].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
 				if ((!options[n].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[n].features.totalVars))) options[n].declarationsComplete = true
 
-				if (!featureBuilder.rejectBranch(options[n].features, options[n].declarationsComplete, linesRemaining))
+				bool rejectBranch = featureBuilder.rejectBranch(options[n].features, options[n].declarationsComplete, linesRemaining)
+				if (!rejectBranch)
 				{
-					accepted = new Node[](accepted, options[n]) // Accepted option, add to array
+					accepted = new Node[](accepted, clone options[n]) // Accepted option, add to array
+					/* out.println("accepted option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)") */
 				}
+				/* else
+				{
+					out.println("rejected option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)")
+				} */
 			}
 
 			/* for (int j = 0; j < accepted.arrayLength; j++) {

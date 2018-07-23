@@ -2021,6 +2021,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		{
 			out.println("... calculating worst case search space size ...")
 			int lineOptions[] = new int[]
+			int totalAcceptedOptions = 0
 
 			PermutationSet ps = new PermutationSet(lineCount, lineCount, maxOptions)
 
@@ -2115,13 +2116,16 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 				lineOptions = new int[](lineOptions, accepted.arrayLength)
 				out.println("Options for line $(iu.intToString(j)): $(iu.intToString(accepted.arrayLength))")///$(iu.intToString(options.arrayLength))")
+				totalAcceptedOptions += accepted.arrayLength
 				j++
 			}
 			// Get return options:
 			Node returnOptions[] = buildReturns(nextNode, fp.returnType)
 			/* lineOptions = new int[](lineOptions, returnOptions.arrayLength) */
 			out.println("Return options for line $(iu.intToString(j)): $(iu.intToString(returnOptions.arrayLength))")
-			out.println("Total accepted options: $(iu.intToString(featureBuilder.acceptedBranches()))")
+			totalAcceptedOptions += returnOptions.arrayLength
+			out.println("Total accepted options: $(iu.intToString(totalAcceptedOptions))")
+			/* out.println("Total accepted options: $(iu.intToString(featureBuilder.acceptedBranches()))") */
 			featureBuilder.resetAcceptedRejectedBranches()
 
 			return lineOptions

@@ -4,9 +4,9 @@ char[] StringStringFunction:function(char locv_0[])
 {
 int locv_1
 char locv_2[]
-locv_0 = locv_2
-locv_0 = locv_0
+locv_2 = locv_2
 locv_1 = 1
+locv_1 = locv_1
 return locv_2
 }
 }

@@ -38,6 +38,8 @@ interface Generator {
 
 	Option getRandomOption(FunctionPrototype fp, int lineCount, RandomInt randomSource, FeatureBuilder fb)
 
+	int[] bestCaseSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
+
 	int[] worstCaseSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 
 	//int countOptions(FunctionPrototype fp, int lineCount)

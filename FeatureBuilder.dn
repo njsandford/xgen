@@ -507,6 +507,100 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     }
   }
 
+  bool declarationsInCorrectOrder(PIFixed current) {
+    bool canMoveOn = true
+    if (providedFeatures.totalVars > current.totalVars) {
+      if (providedFeatures.varTypes.totalInts > current.varTypes.totalInts) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalDecs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalDecs > current.varTypes.totalDecs) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalBools > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalBools > current.varTypes.totalBools) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalChars > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalChars > current.varTypes.totalChars) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalDatas > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalDatas > current.varTypes.totalDatas) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalIntArrs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalIntArrs > current.varTypes.totalIntArrs) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalDecArrs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalDecArrs > current.varTypes.totalDecArrs) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalBoolArrs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalBoolArrs > current.varTypes.totalBoolArrs) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalCharArrs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalCharArrs > current.varTypes.totalCharArrs) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalDataArrs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalDataArrs > current.varTypes.totalDataArrs) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalObjs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalObjs > current.varTypes.totalObjs) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalObjArrs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalObjArrs > current.varTypes.totalObjArrs) {
+        canMoveOn = false
+      }
+      if (!canMoveOn && (current.varTypes.totalFuncArrs > 0))
+      {
+        return false
+      }
+      else if (providedFeatures.varTypes.totalFuncArrs > current.varTypes.totalFuncArrs) {
+        canMoveOn = false
+      }
+    }
+    return true
+  }
+
   bool correctDeclarations(PIFixed current) {
     if (providedFeatures.totalVars != current.totalVars) {
       return false
@@ -526,7 +620,25 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
     if (providedFeatures.varTypes.totalDatas != current.varTypes.totalDatas) {
       return false
     }
+    if (providedFeatures.varTypes.totalIntArrs != current.varTypes.totalIntArrs) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalDecArrs != current.varTypes.totalDecArrs) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalBoolArrs != current.varTypes.totalBoolArrs) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalCharArrs != current.varTypes.totalCharArrs) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalDataArrs != current.varTypes.totalDataArrs) {
+      return false
+    }
     if (providedFeatures.varTypes.totalObjs != current.varTypes.totalObjs) {
+      return false
+    }
+    if (providedFeatures.varTypes.totalObjArrs != current.varTypes.totalObjArrs) {
       return false
     }
     if (providedFeatures.varTypes.totalFuncArrs != current.varTypes.totalFuncArrs) {
@@ -540,6 +652,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   bool FeatureBuilder:areFeaturesReachable(PIFixed current, bool declarationsComplete, int linesRemaining) {
     if (providedFeatures == null) output.println("providedFeatures is null in areFeaturesReachable in FeatureBuilder")
     if (current == null) output.println("current FV is null in areFeaturesReachable in FeatureBuilder")
+    if (!declarationsInCorrectOrder(current)) return false
     if (declarationsComplete && !correctDeclarations(current)) {
       // If declarations are finished, no more can be done, so check if all are correct.
       return false

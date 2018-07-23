@@ -2017,6 +2017,124 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			}
 		}
 
+		int[] Generator:bestCaseSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
+		{
+			out.println("... calculating best case search space size ...")
+			int lineOptions[] = new int[]
+			int totalAcceptedOptions = 0
+
+			PermutationSet ps = new PermutationSet(lineCount, lineCount, maxOptions)
+
+			testFunction = fp
+			featureBuilder.setParameterTypes(fp.parameterTypes)
+
+			int ins[] = null
+
+			for (int i = 0; i < fp.parameterTypes.arrayLength; i++)
+			{
+				ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
+			}
+
+			// NOTE: specify at the start whether or not to do any variable declarations
+			bool declarationsComplete = false
+			if (featureBuilder.totalVarsRequired() == 0) declarationsComplete == true
+
+			Node root = new Node(null, !declarationsComplete, ins)
+			int j = 0
+			Node nextNode = root
+			Node bestOptions[] = new Node[]
+			Node accepted[] = new Node[]
+			// For each line of program, calculate the number of options available.
+			for (int i = lineCount; i > 0; i--)
+			{
+				/* bestOptions = new Node[] */
+				/* accepted = new Node[] */
+				/* out.println("current line no: $(iu.intToString(i))") */
+				Node currentNode = clone nextNode
+
+				if (i == lineCount)
+				{
+					bestOptions = getAcceptedOptions(nextNode, i, true, featureBuilder, fp)
+				}
+
+				/* out.println("\nACCEPTED ops arrayLength for linesRemaining $(iu.intToString(i)): $(iu.intToString(bestOptions.arrayLength))") */
+
+				accepted = bestOptions
+				/* for (int n = 0; n < bestOptions.arrayLength; n++)
+				{
+					PIFixed currentFeatures = bestOptions[n].features
+					out.println("option $(iu.intToString(n)): $(bestOptions[n].lineInfo.line)")
+					out.println("Features:")
+					out.println("totalInts: $(iu.intToString(currentFeatures.varTypes.totalInts))")
+					out.println("totalDecs: $(iu.intToString(currentFeatures.varTypes.totalDecs))")
+					out.println("totalVarToVar: $(iu.intToString(currentFeatures.asmtTypes.totalVarToVar))")
+					out.println("totalVarToLit: $(iu.intToString(currentFeatures.asmtTypes.totalVarToLit))")
+					out.println("literalValue: $(currentFeatures.asmtTypes.literalValue)")
+				} */
+				/* else
+				{
+					accepted = bestOptions
+				} */
+
+
+
+				if (i == 1)
+				{
+					if (accepted.arrayLength == 0) out.println("No options accepted!")
+					else nextNode = accepted[0] // doesn't matter which options is chosen as the last option, as there will be no further options.
+				}
+				else
+				{
+					// Find worst next option:
+					Node currentOption
+					Node bestOption = accepted[0] // initially use first option.
+					int bestOptionIndex
+					Node currentOptions[] = new Node[]
+					bestOptions = new Node[]
+					for (int x = 0; x < accepted.arrayLength; x++)
+					{
+						currentOption = clone accepted[x]
+						currentOption.features = featureBuilder.copyFeatures(accepted[x].features)
+						/* out.println("next line no: $(iu.intToString(i - 1))") */
+						currentOptions = getAcceptedOptions(currentOption, i - 1, true, featureBuilder, fp)
+						/* out.println("current ops len: $(iu.intToString(currentOptions.arrayLength)), worst len: $(iu.intToString(bestOptions.arrayLength))") */
+						/* out.println("bestOptions len: $(iu.intToString(bestOptions.arrayLength)), bestOptionIndex: $(iu.intToString(bestOptionIndex)), currentOptions len: $(iu.intToString(currentOptions.arrayLength))") */
+						/* if (!currentOption.declarationsComplete) {
+
+						} */
+						else if (bestOptions.arrayLength == 0 || (currentOptions.arrayLength > 0 && (currentOptions.arrayLength < bestOptions.arrayLength)))
+						{
+							bestOptions = currentOptions
+							bestOptionIndex = x
+							bestOption = clone accepted[x]
+							/* out.println("new current ops len: $(iu.intToString(currentOptions.arrayLength)), new worst len: $(iu.intToString(bestOptions.arrayLength))") */
+						}
+					}
+					/* out.println("accepted options: $(iu.intToString(accepted.arrayLength)), worst option index: $(iu.intToString(bestOptionIndex))") */
+					nextNode = clone bestOption//accepted[bestOptionIndex]
+					nextNode.features = featureBuilder.copyFeatures(bestOption.features)
+				}
+
+				/* nextNode = accepted[0] // Use the first accepted branch, as there will be no best/worst case. */
+
+				lineOptions = new int[](lineOptions, accepted.arrayLength)
+				out.println("Options for line $(iu.intToString(j)): $(iu.intToString(accepted.arrayLength))")///$(iu.intToString(options.arrayLength))")
+				totalAcceptedOptions += accepted.arrayLength
+				j++
+			}
+			// Get return options:
+			Node returnOptions[] = buildReturns(nextNode, fp.returnType)
+			/* lineOptions = new int[](lineOptions, returnOptions.arrayLength) */
+			out.println("Return options for line $(iu.intToString(j)): $(iu.intToString(returnOptions.arrayLength))")
+			totalAcceptedOptions += returnOptions.arrayLength
+			out.println("Total accepted options to find best case: $(iu.intToString(totalAcceptedOptions))")
+			/* out.println("Total accepted options: $(iu.intToString(featureBuilder.acceptedBranches()))") */
+			featureBuilder.resetAcceptedRejectedBranches()
+
+			return lineOptions
+		}
+
+
 		int[] Generator:worstCaseSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
 			out.println("... calculating worst case search space size ...")
@@ -2124,7 +2242,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			/* lineOptions = new int[](lineOptions, returnOptions.arrayLength) */
 			out.println("Return options for line $(iu.intToString(j)): $(iu.intToString(returnOptions.arrayLength))")
 			totalAcceptedOptions += returnOptions.arrayLength
-			out.println("Total accepted options: $(iu.intToString(totalAcceptedOptions))")
+			out.println("Total accepted options to find worst case: $(iu.intToString(totalAcceptedOptions))")
 			/* out.println("Total accepted options: $(iu.intToString(featureBuilder.acceptedBranches()))") */
 			featureBuilder.resetAcceptedRejectedBranches()
 

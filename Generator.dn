@@ -2042,9 +2042,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			int j = 0
 			Node nextNode = root
 			Node worstOptions[] = new Node[]
+			Node accepted[] = new Node[]
 			// For each line of program, calculate the number of options available.
 			for (int i = lineCount; i > 0; i--)
 			{
+				/* worstOptions = new Node[] */
+				/* accepted = new Node[] */
 				/* out.println("current line no: $(iu.intToString(i))") */
 				Node currentNode = clone nextNode
 
@@ -2052,40 +2055,60 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 					worstOptions = getAcceptedOptions(nextNode, i, true, featureBuilder, fp)
 				}
-				Node accepted[] = worstOptions
+
+				/* out.println("\nACCEPTED ops arrayLength for linesRemaining $(iu.intToString(i)): $(iu.intToString(worstOptions.arrayLength))") */
+
+				accepted = worstOptions
 				/* for (int n = 0; n < worstOptions.arrayLength; n++)
 				{
+					PIFixed currentFeatures = worstOptions[n].features
 					out.println("option $(iu.intToString(n)): $(worstOptions[n].lineInfo.line)")
+					out.println("Features:")
+					out.println("totalInts: $(iu.intToString(currentFeatures.varTypes.totalInts))")
+					out.println("totalDecs: $(iu.intToString(currentFeatures.varTypes.totalDecs))")
+					out.println("totalVarToVar: $(iu.intToString(currentFeatures.asmtTypes.totalVarToVar))")
+					out.println("totalVarToLit: $(iu.intToString(currentFeatures.asmtTypes.totalVarToLit))")
+					out.println("literalValue: $(currentFeatures.asmtTypes.literalValue)")
 				} */
 				/* else
 				{
 					accepted = worstOptions
 				} */
 
+
+
 				if (i == 1)
 				{
-					nextNode = accepted[0] // doesn't matter which options is chosen as the last option, as there will be no further options.
+					if (accepted.arrayLength == 0) out.println("No options accepted!")
+					else nextNode = accepted[0] // doesn't matter which options is chosen as the last option, as there will be no further options.
 				}
 				else
 				{
 					// Find worst next option:
 					Node currentOption
+					Node worstOption = accepted[0] // initially use first option.
 					int worstOptionIndex
-					Node currentOptions[]
-					worstOptions = null
+					Node currentOptions[] = new Node[]
+					worstOptions = new Node[]
 					for (int x = 0; x < accepted.arrayLength; x++)
 					{
 						currentOption = clone accepted[x]
+						currentOption.features = featureBuilder.copyFeatures(accepted[x].features)
 						/* out.println("next line no: $(iu.intToString(i - 1))") */
 						currentOptions = getAcceptedOptions(currentOption, i - 1, true, featureBuilder, fp)
+						/* out.println("current ops len: $(iu.intToString(currentOptions.arrayLength)), worst len: $(iu.intToString(worstOptions.arrayLength))") */
 						/* out.println("worstOptions len: $(iu.intToString(worstOptions.arrayLength)), worstOptionIndex: $(iu.intToString(worstOptionIndex)), currentOptions len: $(iu.intToString(currentOptions.arrayLength))") */
-						if (worstOptions.arrayLength == 0 || (worstOptions.arrayLength != 0 && currentOptions.arrayLength > worstOptions.arrayLength))
+						if (worstOptions.arrayLength == 0 || (currentOptions.arrayLength > 0 && (currentOptions.arrayLength > worstOptions.arrayLength)))
 						{
 							worstOptions = currentOptions
 							worstOptionIndex = x
+							worstOption = clone accepted[x]
+							/* out.println("new current ops len: $(iu.intToString(currentOptions.arrayLength)), new worst len: $(iu.intToString(worstOptions.arrayLength))") */
 						}
 					}
-					nextNode = accepted[worstOptionIndex]
+					/* out.println("accepted options: $(iu.intToString(accepted.arrayLength)), worst option index: $(iu.intToString(worstOptionIndex))") */
+					nextNode = clone worstOption//accepted[worstOptionIndex]
+					nextNode.features = featureBuilder.copyFeatures(worstOption.features)
 				}
 
 				/* nextNode = accepted[0] // Use the first accepted branch, as there will be no best/worst case. */
@@ -2114,7 +2137,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				/* linesRemaining -- */
 				Operation lineInfo = options[n].lineInfo
 				/* nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead. */
-				options[n].features = featureBuilder.updateFeatureVector(options[n].features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
+				options[n].features = featureBuilder.updateFeatureVector(root.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
 				if ((!options[n].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[n].features.totalVars))) options[n].declarationsComplete = true
 
 				bool rejectBranch = featureBuilder.rejectBranch(options[n].features, options[n].declarationsComplete, linesRemaining)

@@ -81,6 +81,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil, io.O
   /* update the assignment type counts */
   AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType, char rhsAssign[]) {
     AssignmentTypes ats = clone asmtTypes
+    ats.literalValue = null
     if (asmtType == 1)
     {
       ats.totalVarToLit += 1

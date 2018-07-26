@@ -64,6 +64,7 @@ data AssignmentTypes {
   int totalDataToLOFunc // 36
 
   char literalValue[]
+  String litValues[]
 }
 
 data OperatorTypes {

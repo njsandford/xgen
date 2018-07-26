@@ -6,8 +6,8 @@ int locv_1
 bool locv_2
 char locv_3[]
 locv_2 = true
-locv_1 = 1
-locv_0 = locv_3
+locv_0 = locv_0
+locv_2 = true
 return locv_0
 }
 }

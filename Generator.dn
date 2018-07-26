@@ -59,6 +59,7 @@ data Variable {
 data Assignment {
 	char line[]
 	int asmtType
+	char opType[] // the operator string used, e.g. "+", ">", ">=", etc.
 }
 
 /* NOTE: I think this represents a single line of a program? */
@@ -70,7 +71,7 @@ data Operation {
 	int decType // declaration type, integer between 1 and 6 representing [int, dec, bool, char, void, Data]
 	int asmtType // assignment type, integer between 1 and 24
 	char rhsAssign[] // holds the string value of the rhs of an assignment
-	int opType // operation type, integer between 1 and 20, represents the operation symbol used on the rhs, e.g. ==, -, +, /, etc.
+	char opType[] // operation type, char[] representing the operation symbol used on the rhs, e.g. ==, -, +, /, etc.
 }
 
 // NOTE:
@@ -923,7 +924,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							//for <t> parameters, it's possible to re-use the exact same call if a parameter matches multiple types
 							// - here we just check that we're not repeating a selected option
 							if (search.search(result, String.[string], new String(functionCall)) == null)
-							result = new Assignment[](result, new Assignment(functionCall, asmtType))
+							result = new Assignment[](result, new Assignment(functionCall, asmtType, f.name))
 
 							while (!clockFinished(hands))
 							{
@@ -932,7 +933,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 								functionCall = getOperatorOption(f, params, hands)
 
 								if (search.search(result, String.[string], new String(functionCall)) == null)
-								result = new Assignment[](result, new Assignment(functionCall, asmtType))
+								result = new Assignment[](result, new Assignment(functionCall, asmtType, f.name))
 							}
 						}
 					}
@@ -957,14 +958,14 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					}
 
 					char functionCall[] = getOperatorOption(f, params, hands)
-					result = new Assignment[](result, new Assignment(functionCall, asmtType))
+					result = new Assignment[](result, new Assignment(functionCall, asmtType, f.name))
 
 					while (!clockFinished(hands))
 					{
 						getNextClockPosition(hands)
 
 						functionCall = getOperatorOption(f, params, hands)
-						result = new Assignment[](result, new Assignment(functionCall, asmtType))
+						result = new Assignment[](result, new Assignment(functionCall, asmtType, f.name))
 					}
 				}
 
@@ -1002,7 +1003,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					{
 						if (types[ins[i]].type.class == Type.ARRAY)
 						{
-							result = new Assignment[](result, new Assignment("locv_$(iu.intToString(i)).arrayLength", asmtType))
+							result = new Assignment[](result, new Assignment("locv_$(iu.intToString(i)).arrayLength", asmtType, "arrayLength"))
 						}
 					}
 				}
@@ -1268,6 +1269,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
 						result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType, options[j].line))
 					}
+					else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34) {
+						result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType, null, options[j].opType))
+					}
 					else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType))
 				}
 			}
@@ -1295,6 +1299,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 								if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
 									result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType), options[j].line))
 								}
+								else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34) {
+									result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType), null, options[j].opType))
+								}
 								else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType)))
 							}
 						}
@@ -1319,6 +1326,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)", 2))
 							if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
 								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType), options[j].line))
+							}
+							else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34) {
+								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType), null, options[j].opType))
 							}
 							else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType)))
 						}

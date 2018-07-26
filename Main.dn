@@ -164,7 +164,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		char buildInterface[] = "Int_IntArray_Int_Function"
 		int lineCount = 3//16 //17 //7 */
 
-		/* String operatorTypes[] = new String[]("+", "<") */
+		/* String operatorTypes[] = new String[](new String("+"), new String("<")) */
 		String literalVals[] = new String[](new String("0"), new String("1"), new String("true")) //new String("0"),
 
 		VariableTypes varTypes = new VariableTypes(/*totalInts*/1, /*totalDecs*/0, /*totalChars*/0, /*totalBools*/1, /*totalDatas*/0, /*totalIntArrs*/0, /*totalDecArrs*/0, /*totalCharArrs*/1, /*totalBoolArrs*/0, /*totalDataArrs*/0, /*totalObjs*/0, /*totalObjArrs*/0, /*totalFuncArrs*/0)

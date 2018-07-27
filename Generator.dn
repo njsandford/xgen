@@ -1658,7 +1658,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, linesRemaining) */
 
 					//PIFixed newFeatures
-					options[i].features = featureBuilder.updateFeatureVector(ori_features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
+					options[i].features = featureBuilder.updateFeatureVector(ori_features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign, lineInfo.opType)
 					/* out.println("literal val: $(lineInfo.rhsAssign)") */
 					/* options[i].features = featureBuilder.copyFeatures(newFeatures) */
 					/* out.println("before declarationsComplete: $(iu.intToString(options[i].declarationsComplete))") */
@@ -2269,7 +2269,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				/* linesRemaining -- */
 				Operation lineInfo = options[n].lineInfo
 				/* nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead. */
-				options[n].features = featureBuilder.updateFeatureVector(root.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign)
+				options[n].features = featureBuilder.updateFeatureVector(root.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign, lineInfo.opType)
 				if ((!options[n].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[n].features.totalVars))) options[n].declarationsComplete = true
 
 				bool rejectBranch = featureBuilder.rejectBranch(options[n].features, options[n].declarationsComplete, linesRemaining)

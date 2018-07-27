@@ -79,9 +79,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
   }
 
   /* update the assignment type counts */
-  AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType, char rhsAssign[]) {
+  AssignmentTypes updateAssignmentTypes(AssignmentTypes asmtTypes, int asmtType, char rhsAssign[], char rhsOpType[]) {
     AssignmentTypes ats = clone asmtTypes
     ats.literalValue = null
+    ats.opType = null
     if (asmtType == 1)
     {
       ats.totalVarToLit += 1
@@ -99,7 +100,11 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       /* output.println("ArrClone") */
     }
     else if (asmtType == 9) ats.totalVarToDataClone += 1
-    else if (asmtType == 10) ats.totalVarToFunc += 1
+    else if (asmtType == 10) {
+      ats.totalVarToFunc += 1
+      ats.opType = rhsOpType
+      ats.opTypes = new String[](ats.opTypes, new String(rhsOpType))
+    }
     else if (asmtType == 11) ats.totalVarToGOFunc += 1
     else if (asmtType == 12) ats.totalVarToLOFunc += 1
     // LHS = variable indices
@@ -117,7 +122,11 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     else if (asmtType == 19) ats.totalIndToArrConcat += 1
     else if (asmtType == 20) ats.totalIndToArrClone += 1
     else if (asmtType == 21) ats.totalIndToDataClone += 1
-    else if (asmtType == 22) ats.totalIndToFunc += 1
+    else if (asmtType == 22) {
+      ats.totalIndToFunc += 1
+      ats.opType = rhsOpType
+      ats.opTypes = new String[](ats.opTypes, new String(rhsOpType))
+    }
     else if (asmtType == 23) ats.totalIndToGOFunc += 1
     else if (asmtType == 24) ats.totalIndToLOFunc += 1
     // LHS = data
@@ -135,7 +144,11 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     else if (asmtType == 31) ats.totalDataToArrConcat += 1
     else if (asmtType == 32) ats.totalDataToArrClone += 1
     else if (asmtType == 33) ats.totalDataToDataClone += 1
-    else if (asmtType == 34) ats.totalDataToFunc += 1
+    else if (asmtType == 34) {
+      ats.totalDataToFunc += 1
+      ats.opType = rhsOpType
+      ats.opTypes = new String[](ats.opTypes, new String(rhsOpType))
+    }
     else if (asmtType == 35) ats.totalDataToGOFunc += 1
     else if (asmtType == 36) ats.totalDataToLOFunc += 1
     /* else ats.literalValue = "" */
@@ -144,7 +157,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
 
   // NOTE: If function overloading is possible, have separate functions for each type of FeatureVector (when more than PIFixed is available!)
   /* FeatureVector doUpdate(Node currentNode) { */
-  PIFixed doUpdate(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[]) {
+  PIFixed doUpdate(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[], char rhsOpType[]) {
     //Node node = clone currentNode
     PIFixed update = clone existingFV //node.features
     /* update.nonBlankLines += 1 */
@@ -281,7 +294,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     else if (lineType == 2) {
       // 2 = assignment - we could increase the number of assignment types
       update.totalAssignments += 1
-      update.asmtTypes = updateAssignmentTypes(update.asmtTypes, asmtType, rhsAssign)
+      update.asmtTypes = updateAssignmentTypes(update.asmtTypes, asmtType, rhsAssign, rhsOpType)
     }
     else if (lineType == 3) {
       // 3 = if statement
@@ -321,7 +334,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
   // get a new PIFixed feature vector for the current feature vector (of a node) plus the new line.
   // May be easier/make more sense to just pass a Node and get the feature vector from there.
   /* PIFixed FeatureBuilder:updateFeatureVector(PIFixed current, String newLine, String inputVarType) { */
-  PIFixed FeatureBuilder:updateFeatureVector(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[]) { //}, String inputVarType) {
+  PIFixed FeatureBuilder:updateFeatureVector(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[], char rhsOpType[]) { //}, String inputVarType) {
     // Node node = clone newNode
     //FeatureVector current = node.features
     /* output.println("line: $(newLine), lineType: $(iu.intToString(lineType)), asmtType: $(iu.intToString(asmtType)), rhsAssign: $(rhsAssign), provided: $(providedFeatures.asmtTypes.literalValue)") */
@@ -340,7 +353,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     }
     else { //(features.totalLines > 0) {
       // Non blank line
-      features = doUpdate(features, lineType, newLine, subLinesCount, decType, asmtType, rhsAssign)
+      features = doUpdate(features, lineType, newLine, subLinesCount, decType, asmtType, rhsAssign, rhsOpType)
     }
     /* printFeatures(features) */
 
@@ -671,6 +684,20 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
         //output.println("current value: $(current.asmtTypes.literalValue)")
         char providedLit[] = providedFeatures.asmtTypes.litValues[i].string
         if (providedLit == current.asmtTypes.literalValue) {
+          //output.println("provided value: $(providedFeatures.asmtTypes.litValues[i].chars), current value: $(current.asmtTypes.literalValue)")
+          matchingValue = true
+        }
+      }
+      if (!matchingValue) return false
+    }
+    if ((providedFeatures.asmtTypes.opTypes != null) && (current.asmtTypes.opType != null))
+    {
+      bool matchingValue = false
+      for (int i = 0; i < providedFeatures.asmtTypes.opTypes.arrayLength; i++)
+      {
+        //output.println("current value: $(current.asmtTypes.literalValue)")
+        char providedOpType[] = providedFeatures.asmtTypes.opTypes[i].string
+        if (providedOpType == current.asmtTypes.opType) {
           //output.println("provided value: $(providedFeatures.asmtTypes.litValues[i].chars), current value: $(current.asmtTypes.literalValue)")
           matchingValue = true
         }

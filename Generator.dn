@@ -1437,6 +1437,53 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return result
 		}
 
+		Node buildReturnTypeDeclarationNode(Operation op, Node n, int remainingLines, bool outerScope, FeatureBuilder featureBuilder)
+		{
+			Node newNode = new Node()
+
+			char newLine[] = makeNewLine(op) // NOTE: This is the string line of code!
+
+			int newins[]
+			bool newdec
+
+			/* New inscope variables */
+			if (op.newVar == null)
+			newins = n.inScope
+			else
+			{
+				newins = new int[](n.inScope, op.newVar.typeIndex)
+				newdec = true
+			}
+
+			SearchScope newss = null
+
+			if (op.subLinesCount > 0)
+				newss = new SearchScope(new Node(null, false, newins, null, true), op.subLinesCount)
+
+			/* Node newNode = clone n */
+
+			newNode.lines = n.lines
+			newNode.declaration = newdec
+			newNode.declarationsComplete = n.declarationsComplete
+			newNode.blankLines = n.blankLines
+			newNode.firstPostDec = false
+			newNode.inScope = newins
+			newNode.subLines = newss
+			newNode.lineInfo = op
+
+			newNode.features = featureBuilder.copyFeatures(n.features)
+
+			// NOTE: Add check for if prev declarations complete is true, if so, keep it that way.
+			if (n.declarationsComplete || op.newVar == null) {
+				newNode.declarationsComplete = true // NOTE: still need this for if not enough decs have been declared.
+			}
+			if (op.line == null) {
+				newNode.blankLines = true // this could also be a count of all blank lines, where a value > 0 is equivalent to 'true'.
+			}
+
+			return newNode
+		}
+
 		// NOTE: convert operations to nodes -- modify this! could a node include an operation?
 		// Maybe this is where the feature builder should be called to build features for each node? (instead of in buildLines)
 		NodeSet buildNextLine(Node n, int remainingLines, bool outerScope, FeatureBuilder featureBuilder) // , FeatureVector features) // Add the featureVector to compare current program to.
@@ -1444,7 +1491,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			Node result[]
 
 			if (n.declarationsComplete && n.optionsCache != null)
-				{
+			{
 				//return a NodeSet, including a list size
 				// - set this list size by scanning from the end and removing 1 for every option with subLines above remainingLines
 				// - (note, we could perform a direct calculation here if we knew on what line number the cache was created...?)
@@ -1455,10 +1502,12 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				if (!outerScope) start = 1
 
 				while (n.optionsCache[length-1].subLines != null && n.optionsCache[length-1].subLines.subLinesCount > (remainingLines-1))
+				{
 					length --
+				}
 
 				return new NodeSet(n.optionsCache, start, length)
-				}
+			}
 
 			Operation ops[] = generateOperations(n.inScope, remainingLines, n.declarationsComplete, n.blankLines, outerScope, featureBuilder.getParameterTypes())
 			for (int j = 0; j < ops.arrayLength; j++)
@@ -1877,21 +1926,32 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return programs
 		}
 
-		Node buildRandomLine(Node start, char returnType[], int lineCount, bool addReturn, RandomInt rgen, FeatureBuilder featureBuilder)
+		Node buildRandomLine(Node start, char returnType[], int lineCount, bool addReturn, RandomInt rgen, FeatureBuilder featureBuilder, bool hasReturnType)
 		{
 			if (lineCount > 0)
 			{
-				NodeSet opSet = buildNextLine(start, lineCount, addReturn, featureBuilder)
-				Node options[] = opSet.options
+				Node nxt
 
-				if (options == null)
-				return null
+				if (!hasReturnType) {
+					int typeIndex = getTypeIndex(getType(returnType).type)
+					char name[] = "locv_$(iu.intToString(start.inScope.arrayLength))"
+					Operation rtnTypeDec = new Operation(new Variable(name, typeIndex), "$(getCleanTypeName(returnType)) $(name)", 1, 0)//, typeNumber)
+					nxt = buildReturnTypeDeclarationNode(rtnTypeDec, start, lineCount, addReturn, featureBuilder)
+					nxt.lines = new int[](start.lines, 0)
+				}
+				else {
+					NodeSet opSet = buildNextLine(start, lineCount, addReturn, featureBuilder)
+					Node options[] = opSet.options
 
-				int ndx = rgen.get(opSet.length)
+					if (options == null)
+					return null
 
-				Node nxt = options[ndx]
+					int ndx = rgen.get(opSet.length)
 
-				nxt.lines = new int[](start.lines, ndx)
+					nxt = options[ndx]
+
+					nxt.lines = new int[](start.lines, ndx)
+				}
 
 				int continueLineCount = lineCount - 1
 
@@ -1902,15 +1962,15 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 					continueLineCount -= sc.subLinesCount
 
-					Node subOption = buildRandomLine(sc.root, returnType, sc.subLinesCount, false, rgen, featureBuilder)
+					Node subOption = buildRandomLine(sc.root, returnType, sc.subLinesCount, false, rgen, featureBuilder, hasReturnType)
 
 					nxt.lines = new int[](nxt.lines, subOption.lines)
 
-					return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen, featureBuilder)
+					return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen, featureBuilder, hasReturnType)
 				}
 				else
 				{
-					return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen, featureBuilder)
+					return buildRandomLine(nxt, returnType, continueLineCount, addReturn, rgen, featureBuilder, hasReturnType)
 				}
 			}
 			else if (addReturn)
@@ -2266,6 +2326,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			Node accepted[] = new Node[]
 			for (int n = opSet.start; n < opSet.length; n++)
 			{
+				out.println("option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)")
+
 				/* linesRemaining -- */
 				Operation lineInfo = options[n].lineInfo
 				/* nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead. */
@@ -2276,7 +2338,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				if (!rejectBranch)
 				{
 					accepted = new Node[](accepted, clone options[n]) // Accepted option, add to array
-					/* out.println("accepted option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)") */
+					out.println("accepted option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)")
 				}
 				/* else
 				{
@@ -2325,9 +2387,14 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		{
 			int ins[] = null
 
+			bool hasReturnType
 			for (int i = 0; i < fp.parameterTypes.arrayLength; i++)
 			{
 				ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
+				if (fp.parameterTypes[i].string == fp.returnType)
+				{
+					hasReturnType = true
+				}
 			}
 
 			// NOTE: specify at the start whether or not to do any variable declarations
@@ -2339,7 +2406,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 			while (choice == null)
 			{
-				choice = buildRandomLine(clone root, fp.returnType, lineCount, true, randomSource, featureBuilder)
+				choice = buildRandomLine(clone root, fp.returnType, lineCount, true, randomSource, featureBuilder, hasReturnType)
 			}
 
 			return choice

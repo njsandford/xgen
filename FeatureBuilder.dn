@@ -314,7 +314,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       // 4 = while loop
       update.totalWhiles += 1
       // Update average while loop length
-      update.totalWhileLength += subLinesCount
+      /* update.totalWhileLength += subLinesCount
       update.aveWhileLength = update.totalWhileLength / update.totalWhiles
       // Update control block nesting info
       LineInfo nextCount = new LineInfo(subLinesCount)
@@ -322,7 +322,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       // Check if current nesting level is greater than previous maximum, if so, update maximum
       if (update.remainingLinesInBlock.getLength() > update.highestNestingLevel) {
         update.highestNestingLevel = update.remainingLinesInBlock.getLength()
-      }
+      } */
     }
     else if (lineType == 5) {
       // 5 = return
@@ -476,9 +476,9 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     if (currentFeatures.totalIfs > providedFeatures.totalIfs) {
       return true
     }
-    if (currentFeatures.highestNestingLevel > providedFeatures.highestNestingLevel) {
+    /* if (currentFeatures.highestNestingLevel > providedFeatures.highestNestingLevel) {
       return true
-    }
+    } */
     return false
   }
 

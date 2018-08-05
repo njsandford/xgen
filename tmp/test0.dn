@@ -1,13 +1,9 @@
-component provides StringStringFunction 
+component provides IntStringFunction 
 {
-char[] StringStringFunction:function(char locv_0[])
+int IntStringFunction:function(char locv_0[])
 {
 int locv_1
-bool locv_2
-char locv_3[]
-locv_2 = locv_1 < locv_2
-locv_2 = true
-locv_1 = 1
-return locv_0
+locv_1 = locv_0.arrayLength
+return locv_1
 }
 }

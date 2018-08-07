@@ -7,7 +7,7 @@ uses Generator
 
 const int PRINT_FREQ = 500
 
-component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, io.Output output, data.IntUtil iu {
+component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, io.Output out, data.IntUtil iu {
 
   /* FeatureBuilder:FeatureBuilder()
     {
@@ -97,7 +97,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     else if (asmtType == 7) ats.totalVarToArrConcat += 1
     else if (asmtType == 8) {
       ats.totalVarToArrClone += 1
-      /* output.println("ArrClone") */
+      /* out.println("ArrClone") */
     }
     else if (asmtType == 9) ats.totalVarToDataClone += 1
     else if (asmtType == 10) {
@@ -313,8 +313,9 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     else if (lineType == 4) {
       // 4 = while loop
       update.totalWhiles += 1
+      out.println("total whiles incremented to: $(iu.intToString(update.totalWhiles))")
       // Update average while loop length
-      /* update.totalWhileLength += subLinesCount
+      update.totalWhileLength += subLinesCount
       update.aveWhileLength = update.totalWhileLength / update.totalWhiles
       // Update control block nesting info
       LineInfo nextCount = new LineInfo(subLinesCount)
@@ -322,7 +323,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       // Check if current nesting level is greater than previous maximum, if so, update maximum
       if (update.remainingLinesInBlock.getLength() > update.highestNestingLevel) {
         update.highestNestingLevel = update.remainingLinesInBlock.getLength()
-      } */
+      }
     }
     else if (lineType == 5) {
       // 5 = return
@@ -337,7 +338,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
   PIFixed FeatureBuilder:updateFeatureVector(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[], char rhsOpType[]) { //}, String inputVarType) {
     // Node node = clone newNode
     //FeatureVector current = node.features
-    /* output.println("line: $(newLine), lineType: $(iu.intToString(lineType)), asmtType: $(iu.intToString(asmtType)), rhsAssign: $(rhsAssign), provided: $(providedFeatures.asmtTypes.literalValue)") */
+    /* out.println("line: $(newLine), lineType: $(iu.intToString(lineType)), asmtType: $(iu.intToString(asmtType)), rhsAssign: $(rhsAssign), provided: $(providedFeatures.asmtTypes.literalValue)") */
 
     PIFixed features = getNewFeatureVector()
     if (existingFV != null) features = copyFeatures(existingFV)
@@ -373,7 +374,8 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       // Check each asmtType now:
     }
     if (current.totalWhiles < providedFeatures.totalWhiles) {
-      minRequired += (providedFeatures.totalWhiles - current.totalWhiles) * 2 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
+      minRequired += (providedFeatures.totalWhiles - current.totalWhiles) * 1 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
+      /* out.println("current whiles: $(iu.intToString(current.totalWhiles)), provided whiles: $(iu.intToString(providedFeatures.totalWhiles)), minlines: $(iu.intToString(minRequired)), linesRemaining: $(iu.intToString(linesRemaining))") */
     }
     if (current.totalIfs < providedFeatures.totalIfs) {
       minRequired += (providedFeatures.totalIfs - current.totalIfs) * 2 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
@@ -467,7 +469,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     }
     if (rejectAssignments(currentFeatures.asmtTypes, providedFeatures.asmtTypes)) {
       /* rejectedBranches += 1 */
-      /* output.print("REJECTED assignments! linesRemaining: $(iu.intToString(linesRemaining))") */
+      /* out.print("REJECTED assignments! linesRemaining: $(iu.intToString(linesRemaining))") */
       return true
     }
     if (currentFeatures.totalWhiles > providedFeatures.totalWhiles) {
@@ -511,14 +513,14 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       rejectedBranches += 1
 
   	  if (printCount % PRINT_FREQ == 0)
-  		  output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+  		  out.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return true
     }
     else {
       acceptedBranches += 1
 
   	  if (printCount % PRINT_FREQ == 0)
-  		  output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+  		  out.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return false
     }
   }
@@ -666,8 +668,8 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
   // Decide if the provided features are reachable from the current FV.
   // NOTE could update this to include the order of assignments made, eg. ints before bools.
   bool FeatureBuilder:areFeaturesReachable(PIFixed current, bool declarationsComplete, int linesRemaining) {
-    if (providedFeatures == null) output.println("providedFeatures is null in areFeaturesReachable in FeatureBuilder")
-    if (current == null) output.println("current FV is null in areFeaturesReachable in FeatureBuilder")
+    if (providedFeatures == null) out.println("providedFeatures is null in areFeaturesReachable in FeatureBuilder")
+    if (current == null) out.println("current FV is null in areFeaturesReachable in FeatureBuilder")
     if (!declarationsInCorrectOrder(current)) return false
     if (declarationsComplete && !correctDeclarations(current)) {
       // If declarations are finished, no more can be done, so check if all are correct.
@@ -681,10 +683,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       bool matchingValue = false
       for (int i = 0; i < providedFeatures.asmtTypes.litValues.arrayLength; i++)
       {
-        //output.println("current value: $(current.asmtTypes.literalValue)")
+        //out.println("current value: $(current.asmtTypes.literalValue)")
         char providedLit[] = providedFeatures.asmtTypes.litValues[i].string
         if (providedLit == current.asmtTypes.literalValue) {
-          //output.println("provided value: $(providedFeatures.asmtTypes.litValues[i].chars), current value: $(current.asmtTypes.literalValue)")
+          //out.println("provided value: $(providedFeatures.asmtTypes.litValues[i].chars), current value: $(current.asmtTypes.literalValue)")
           matchingValue = true
         }
       }
@@ -695,10 +697,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       bool matchingValue = false
       for (int i = 0; i < providedFeatures.asmtTypes.opTypes.arrayLength; i++)
       {
-        //output.println("current value: $(current.asmtTypes.literalValue)")
+        //out.println("current value: $(current.asmtTypes.literalValue)")
         char providedOpType[] = providedFeatures.asmtTypes.opTypes[i].string
         if (providedOpType == current.asmtTypes.opType) {
-          //output.println("provided value: $(providedFeatures.asmtTypes.litValues[i].chars), current value: $(current.asmtTypes.literalValue)")
+          //out.println("provided value: $(providedFeatures.asmtTypes.litValues[i].chars), current value: $(current.asmtTypes.literalValue)")
           matchingValue = true
         }
       }
@@ -749,7 +751,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
   }
 
   bool FeatureBuilder:isProgramSimilar(PIFixed features, int linesRemaining) {
-    if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
+    if (providedFeatures == null) out.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
     // If the features of the current node are similar enough to the provided feature vector, add it to tree.
     int proximityToProvidedProgram = distanceBetweenVectors(providedFeatures, features)
 
@@ -760,7 +762,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       acceptedPrograms += 1
 
 	  if (printCount % PRINT_FREQ == 0)
-		output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+		out.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
 
       return true
     }
@@ -768,13 +770,13 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       rejectedPrograms += 1
 
 	  if (printCount % PRINT_FREQ == 0)
-		output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+		out.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return false
     }
   }
 
   bool FeatureBuilder:programHasMinimumFeatures(PIFixed currentFeatures, int linesRemaining) {
-    /* if (providedFeatures == null) output.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
+    /* if (providedFeatures == null) out.println("providedFeatures is null in isProgramSimilar in FeatureBuilder")
     // If the features of the current node are similar enough to the provided feature vector, add it to tree.
     bool minFeatures = true
     //minFeatures = minFeatures && (providedFeatures.totalLines <= currentFeatures.totalLines)
@@ -817,12 +819,12 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     minFeatures = minFeatures && (providedFeatures.highestNestingLevel <= currentFeatures.highestNestingLevel)
     if (minFeatures) { */
       acceptedPrograms += 1
-      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+      out.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return true
     /* }
     else {
       rejectedPrograms += 1
-      output.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
+      out.print("\r rejectedBranches: $(iu.intToString(rejectedBranches)), acceptedBranches: $(iu.intToString(acceptedBranches)), rejectedPrograms: $(iu.intToString(rejectedPrograms)), acceptedPrograms: $(iu.intToString(acceptedPrograms)), linesRemaining: $(iu.intToString(linesRemaining))")
       return false
     } */
   }
@@ -840,20 +842,20 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
   }
 
   void printFeatures(PIFixed currentFeatures) {
-    output.println("current vars: $(iu.intToString(currentFeatures.totalVars)), provided: $(iu.intToString(providedFeatures.totalVars))")
-    output.println("current ints: $(iu.intToString(currentFeatures.varTypes.totalInts)), provided: $(iu.intToString(providedFeatures.varTypes.totalInts))")
-    output.println("current decs: $(iu.intToString(currentFeatures.varTypes.totalDecs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDecs))")
-    output.println("current bools: $(iu.intToString(currentFeatures.varTypes.totalBools)), provided: $(iu.intToString(providedFeatures.varTypes.totalBools))")
-    output.println("current chars: $(iu.intToString(currentFeatures.varTypes.totalChars)), provided: $(iu.intToString(providedFeatures.varTypes.totalChars))")
-    output.println("current datas: $(iu.intToString(currentFeatures.varTypes.totalDatas)), provided: $(iu.intToString(providedFeatures.varTypes.totalDatas))")
-    output.println("current int arrays: $(iu.intToString(currentFeatures.varTypes.totalIntArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalIntArrs))")
-    output.println("current dec arrays: $(iu.intToString(currentFeatures.varTypes.totalDecArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDecArrs))")
-    output.println("current bool arrays: $(iu.intToString(currentFeatures.varTypes.totalBoolArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalBoolArrs))")
-    output.println("current char arrays: $(iu.intToString(currentFeatures.varTypes.totalCharArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalCharArrs))")
-    output.println("current data arrays: $(iu.intToString(currentFeatures.varTypes.totalDataArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDataArrs))")
-    output.println("current objects: $(iu.intToString(currentFeatures.varTypes.totalObjs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjs))")
-    output.println("current object arrays: $(iu.intToString(currentFeatures.varTypes.totalObjArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjArrs))")
-    output.println("current function arrays: $(iu.intToString(currentFeatures.varTypes.totalFuncArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalFuncArrs))")
+    out.println("current vars: $(iu.intToString(currentFeatures.totalVars)), provided: $(iu.intToString(providedFeatures.totalVars))")
+    out.println("current ints: $(iu.intToString(currentFeatures.varTypes.totalInts)), provided: $(iu.intToString(providedFeatures.varTypes.totalInts))")
+    out.println("current decs: $(iu.intToString(currentFeatures.varTypes.totalDecs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDecs))")
+    out.println("current bools: $(iu.intToString(currentFeatures.varTypes.totalBools)), provided: $(iu.intToString(providedFeatures.varTypes.totalBools))")
+    out.println("current chars: $(iu.intToString(currentFeatures.varTypes.totalChars)), provided: $(iu.intToString(providedFeatures.varTypes.totalChars))")
+    out.println("current datas: $(iu.intToString(currentFeatures.varTypes.totalDatas)), provided: $(iu.intToString(providedFeatures.varTypes.totalDatas))")
+    out.println("current int arrays: $(iu.intToString(currentFeatures.varTypes.totalIntArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalIntArrs))")
+    out.println("current dec arrays: $(iu.intToString(currentFeatures.varTypes.totalDecArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDecArrs))")
+    out.println("current bool arrays: $(iu.intToString(currentFeatures.varTypes.totalBoolArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalBoolArrs))")
+    out.println("current char arrays: $(iu.intToString(currentFeatures.varTypes.totalCharArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalCharArrs))")
+    out.println("current data arrays: $(iu.intToString(currentFeatures.varTypes.totalDataArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalDataArrs))")
+    out.println("current objects: $(iu.intToString(currentFeatures.varTypes.totalObjs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjs))")
+    out.println("current object arrays: $(iu.intToString(currentFeatures.varTypes.totalObjArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalObjArrs))")
+    out.println("current function arrays: $(iu.intToString(currentFeatures.varTypes.totalFuncArrs)), provided: $(iu.intToString(providedFeatures.varTypes.totalFuncArrs))")
   }
 
   PIFixed FeatureBuilder:copyFeatures(PIFixed features) {

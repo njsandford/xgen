@@ -1671,7 +1671,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				if (fastForward != null)
 					{
 					//discount all of the options before the FF point
-					offset = fastForward.lines[globalLineCount]+opSet.start
+					out.println("globalLineCount: $(iu.intToString(globalLineCount)), ff.lines: $(iu.intToString(fastForward.lines.arrayLength))")
+					offset = fastForward.lines[globalLineCount-1]+opSet.start
 					}
 
 				int endInd = options.arrayLength
@@ -1720,11 +1721,16 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					rejectBranch = featureBuilder.rejectBranch(options[i].features, options[i].declarationsComplete, linesRemaining)
 					/* }
 					else rejectBranch = true */
+					/* out.println("$(lineInfo.line), $(iu.intToString(linesRemaining))") */
+					if (stringUtil.find(lineInfo.line, "while") != StringUtil.NOT_FOUND) {
+						out.println("WHILE LOOP")
+					}
 
-					/* if (rejectBranch)// (!rejectEarly && programIsReachable)
+					if (rejectBranch && stringUtil.find(lineInfo.line, "while") != StringUtil.NOT_FOUND)// (!rejectEarly && programIsReachable)
 					{
-						out.println("rejected option $(iu.intToString(i)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[i].lineInfo.line)")
-					} */
+						out.println("line no: $(iu.intToString(linesRemaining))")
+						/* out.println("rejected option $(iu.intToString(i)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[i].lineInfo.line)") */
+					}
 					/*	//options[i].features = previousFeatures
 						//start.features = previousFeatures
 
@@ -1770,6 +1776,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						PIFixed features = options[i].features
 
 						options[i].lines = new int[](start.lines, set)
+						//options[i].lines[]
 
 						//ps.lineIndex ++
 						/* int nextGLI = globalLineCount + 1 */
@@ -1784,6 +1791,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 							PermutationSet subps = new PermutationSet(sc.subLinesCount, ps.globalLines, ps.totalLines - lineCount, 1)
 							sc.root.optionsCache = options
+							sc.root.lines = options[i].lines
 
 							bool subGlobalFF = false
 
@@ -1791,7 +1799,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 							if (fastForward != null)
 							{
 								subps.nextNode = clone fastForward
-								subps.nextNode.lines = removeFirstIntCells(subps.nextNode.lines, sc.subLinesStart)
+								//subps.nextNode.lines = removeFirstIntCells(subps.nextNode.lines, sc.subLinesStart)
 								subGlobalFF = true // don't allow any sub-scopes to advance if the parent scope is resuming
 							}
 
@@ -1807,7 +1815,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 								if (subOption != null)
 								{
+									/* subOption.features = featureBuilder.updateFeatureVector() */
 									PIFixed subFeatures = subOption[0].features
+									out.println("current whiles: $(iu.intToString(subFeatures.totalWhiles)))")
 
 									//continue to populate the next line of code after the sub-scope
 									// - the use of globalFF here is really strange to work out: what it's saying is, if I'm in a sub-scope already, an we're in a fast-forward, do NOT mess with the last line of this sub-scope, because the "resume" point of a fast-forward is ALWAYS from the last line of the function (i.e. the return); nothing else is allowed to move -- because last-line-returns completely ignore globalFF, this only gets noticed if we're on the last line of a sub-scope, where we *don't* want to skip the option
@@ -1884,8 +1894,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 					// Replace this with a check to find if all features are included.
 					if (programClosenessCheck) {
-
-						selection = new Node[](selection, new Node(new int[](start.lines, set)))
+						Node newNode = new Node(new int[](start.lines, set))
+						selection = new Node[](selection, newNode)
+						out.println("program length is $(iu.intToString(newNode.lines.arrayLength))")
 
 						ps.found ++
 
@@ -2326,7 +2337,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			Node accepted[] = new Node[]
 			for (int n = opSet.start; n < opSet.length; n++)
 			{
-				out.println("option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)")
+				/* out.println("option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)") */
 
 				/* linesRemaining -- */
 				Operation lineInfo = options[n].lineInfo
@@ -2433,6 +2444,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 			ScopeStackItem top = new ScopeStackItem(ins, leaf.lines.arrayLength - 1)
 
+			out.println(" initial remaining lines - $(iu.intToString(top.remainingLines))")
+
 			int varCount = 0
 
 			for (int i = 0; i < leaf.lines.arrayLength; i++)
@@ -2459,7 +2472,8 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				for (int j = 0; j < options.arrayLength; j++) {
 					out.println("option $(iu.intToString(j)): $(options[j].line)")
 				} */
-				/* out.println("Options lenght: $(iu.intToString(options.arrayLength)), index no: $(iu.intToString(leaf.lines[i])), leaf lines length: $(iu.intToString(leaf.lines.arrayLength)), leaf index no: $(iu.intToString(i))") */
+				out.println("Options lenght: $(iu.intToString(options.arrayLength)), index no: $(iu.intToString(leaf.lines[i])), leaf lines length: $(iu.intToString(leaf.lines.arrayLength)), leaf index no: $(iu.intToString(i))")
+				out.println(" - '$(options[options.arrayLength-1].line)' - $(iu.intToString(top.remainingLines))")
 				Operation choice = options[leaf.lines[i]]
 
 				if (choice.newVar == null) declarationsComplete = true

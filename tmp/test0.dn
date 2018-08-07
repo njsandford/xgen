@@ -1,9 +1,3 @@
-component provides IntStringFunction 
+component provides Int_IntArray_Int_Function 
 {
-int IntStringFunction:function(char locv_0[])
-{
-int locv_1
-locv_1 = locv_0.arrayLength
-return locv_1
-}
 }

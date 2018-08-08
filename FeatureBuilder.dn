@@ -313,7 +313,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     else if (lineType == 4) {
       // 4 = while loop
       update.totalWhiles += 1
-      out.println("total whiles incremented to: $(iu.intToString(update.totalWhiles))")
+      /* out.println("total whiles incremented to: $(iu.intToString(update.totalWhiles))") */
       // Update average while loop length
       update.totalWhileLength += subLinesCount
       update.aveWhileLength = update.totalWhileLength / update.totalWhiles
@@ -374,11 +374,12 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       // Check each asmtType now:
     }
     if (current.totalWhiles < providedFeatures.totalWhiles) {
-      minRequired += (providedFeatures.totalWhiles - current.totalWhiles) * 1 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
-      /* out.println("current whiles: $(iu.intToString(current.totalWhiles)), provided whiles: $(iu.intToString(providedFeatures.totalWhiles)), minlines: $(iu.intToString(minRequired)), linesRemaining: $(iu.intToString(linesRemaining))") */
+      if (((providedFeatures.totalWhiles - current.totalWhiles) * 2) > linesRemaining) return false // Minimum lines to make a control block is 2 lines
+      minRequired += providedFeatures.totalWhiles - current.totalWhiles
     }
     if (current.totalIfs < providedFeatures.totalIfs) {
-      minRequired += (providedFeatures.totalIfs - current.totalIfs) * 2 // Minimum lines to make a control block is 3 lines? or 4? 1) while statement, 2) opening brace, 3) line, 4) closing brace
+      if (((providedFeatures.totalIfs - current.totalIfs) * 2) > linesRemaining) return false // Minimum lines to make a control block is 2 lines
+      minRequired += providedFeatures.totalIfs - current.totalIfs
     }
     return minRequired <= linesRemaining
   }

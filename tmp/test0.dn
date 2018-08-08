@@ -1,3 +1,12 @@
 component provides Int_IntArray_Int_Function 
 {
+int Int_IntArray_Int_Function:function(int locv_0[],int locv_1)
+{
+bool locv_2
+while (locv_2)
+{
+locv_2 = true
+}
+return locv_1
+}
 }

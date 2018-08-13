@@ -2338,6 +2338,19 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			else return value * intPower(value, power - 1)
 		}
 
+		int factorial(int value)
+		{
+			if (value == 0) return 1
+			else return value * factorial(value - 1)
+		}
+
+		int optionCombinations(int n, int k)
+		{
+			int denominator = factorial(n)
+			int numerator = factorial(k) * factorial(n-k)
+			return denominator / numerator
+		}
+
 		int Generator:calculateSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
 			out.println("... calculating search space size ...")
@@ -2398,6 +2411,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			// Then multiply the number accepted to the power of how many are required.
 
 			int non_declaration_lines = linesRemaining
+			int min_feature_quantity = 0
 			int search_space_size = 1
 			// Check assignment features
 			if (providedFeatures.totalAssignments > 0)
@@ -2407,6 +2421,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				if (asmtTypes.totalVarToLit > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToLit
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
 					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 1, 1, 0, 0)
 					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
 					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
@@ -2418,6 +2433,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				if (asmtTypes.totalVarToVar > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToVar
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
 					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 2, 1, 0, 0)
 					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
 					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
@@ -2463,6 +2479,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				if (asmtTypes.totalVarToFunc > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToFunc
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
 					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 10, 1, 0, 0)
 					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
 					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
@@ -2484,9 +2501,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 			Node returnOptions[] = buildReturns(nextNode, fp.returnType)
 			int sss_copy = search_space_size
-			search_space_size = search_space_size * returnOptions.arrayLength
-
-			out.println("search space size: $(iu.intToString(sss_copy)) * $(iu.intToString(returnOptions.arrayLength)) = $(iu.intToString(search_space_size))")
+			int combinations = optionCombinations(non_declaration_lines, min_feature_quantity)
+			search_space_size = search_space_size * returnOptions.arrayLength * combinations
+			/* int factorial = factorial(4) */
+			out.println("combinations: $(iu.intToString(combinations))")
+			out.println("search space size: $(iu.intToString(sss_copy)) * $(iu.intToString(returnOptions.arrayLength)) * $(iu.intToString(combinations)) = $(iu.intToString(search_space_size))")
 			return search_space_size
 		}
 

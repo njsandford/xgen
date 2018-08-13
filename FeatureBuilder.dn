@@ -47,6 +47,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     providedFeatures = _providedFeatures
   }
 
+  PIFixed FeatureBuilder:getProvidedFeatures() {
+    return providedFeatures
+  }
+
   void FeatureBuilder:setFunctionData(FunctionData _functionData) {
     functionData = _functionData
   }
@@ -178,13 +182,13 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     if (lineType == 0) {
       // 0 = local variable call
       update.totalFunctionCalls += 1
-      if (providedFeatures.totalFunctionCalls < update.totalFunctionCalls) update.isValid = false
+      /* if (providedFeatures.totalFunctionCalls < update.totalFunctionCalls) update.isValid = false */
     }
     else if (lineType == 1) {
       // 1 = declaration
       update.totalVars += 1
       if (providedFeatures.totalVars < update.totalVars) {
-        update.isValid = false
+        /* update.isValid = false */
         /* return null */
       }
       if (providedFeatures.totalVars >= update.totalLines) {
@@ -201,91 +205,91 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       if (decType == 1) {
         vts.totalInts += 1
         if (providedFeatures.varTypes.totalInts < vts.totalInts) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 2) {
         vts.totalDecs += 1
         if (providedFeatures.varTypes.totalDecs < vts.totalDecs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 3) {
         vts.totalChars += 1
         if (providedFeatures.varTypes.totalChars < vts.totalChars) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 4) {
         vts.totalBools += 1
         if (providedFeatures.varTypes.totalBools < vts.totalBools) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 5) {
         vts.totalDatas += 1
         if (providedFeatures.varTypes.totalDatas < vts.totalDatas) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 6) {
         vts.totalIntArrs += 1
         if (providedFeatures.varTypes.totalIntArrs < vts.totalIntArrs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 7) {
         vts.totalDecArrs += 1
         if (providedFeatures.varTypes.totalDecArrs < vts.totalDecArrs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 8) {
         vts.totalCharArrs += 1
         if (providedFeatures.varTypes.totalCharArrs < vts.totalCharArrs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 9) {
         vts.totalBoolArrs += 1
         if (providedFeatures.varTypes.totalBoolArrs < vts.totalBoolArrs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 10) {
         vts.totalDataArrs += 1
         if (providedFeatures.varTypes.totalDataArrs < vts.totalDataArrs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 11) {
         vts.totalObjs += 1
         if (providedFeatures.varTypes.totalObjs < vts.totalObjs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 12) {
         vts.totalObjArrs += 1
         if (providedFeatures.varTypes.totalObjArrs < vts.totalObjArrs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
       else if (decType == 13) {
         vts.totalFuncArrs += 1
         if (providedFeatures.varTypes.totalFuncArrs < vts.totalFuncArrs) {
-          update.isValid = false
+          /* update.isValid = false */
           /* return null */
         }
       }
@@ -325,10 +329,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
         update.highestNestingLevel = update.remainingLinesInBlock.getLength()
       }
     }
-    else if (lineType == 5) {
+    /* else if (lineType == 5) {
       // 5 = return
       update.totalReturns += 1
-    }
+    } */
     return update
   }
 
@@ -423,6 +427,9 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     // NOTE: complete!
     /* printFeatures(currentFeatures) */
     // Check if too many variables have been declared
+    if (currentFeatures.blankLines > providedFeatures.blankLines) {
+      return true
+    }
     if (currentFeatures.totalVars > providedFeatures.totalVars) {
       return true
     }
@@ -491,7 +498,7 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     totalDistance += differenceBetweenInts(lhs.totalLines, rhs.totalLines)
     totalDistance += differenceBetweenInts(lhs.blankLines, rhs.blankLines)//lhs.nonBlankLines, rhs.nonBlankLines)
     totalDistance += differenceBetweenInts(lhs.totalVars, rhs.totalVars)
-    totalDistance += differenceBetweenInts(lhs.nonInputVars, rhs.nonInputVars)
+    /* totalDistance += differenceBetweenInts(lhs.nonInputVars, rhs.nonInputVars) */
     totalDistance += differenceBetweenInts(lhs.totalAssignments, rhs.totalAssignments)
     totalDistance += differenceBetweenInts(lhs.totalWhiles, rhs.totalWhiles)
     totalDistance += differenceBetweenInts(lhs.totalIfs, rhs.totalIfs)
@@ -863,10 +870,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     if (features == null) return null
     VariableTypes varTypesCopy = clone features.varTypes
     AssignmentTypes asmtTypesCopy = clone features.asmtTypes
-    OperatorTypes opTypesCopy = clone features.opTypes
+    /* OperatorTypes opTypesCopy = clone features.opTypes */
     /* asmtTypesCopy.literalValue = "5" */
     Stack rlibCopy = features.remainingLinesInBlock//.clone()
-    PIFixed copy = new PIFixed(features.isValid, /*totalLines*/features.totalLines, /*blankLines*/features.blankLines, /*totalVars*/features.totalVars, /*varTypes*/varTypesCopy, /*nonInputVars*/features.nonInputVars, /*totalAssignments*/features.totalAssignments, /*asmtTypes*/asmtTypesCopy, /*totalOperations*/features.totalOperations, /*opTypes*/opTypesCopy, /*totalWhiles*/features.totalWhiles, /*totalIfs*/features.totalIfs, /*totalFunctionCalls*/features.totalFunctionCalls, /*totalReturns*/features.totalReturns, /*aveLoopLength*/features.aveLoopLength,
+    PIFixed copy = new PIFixed(/*totalLines*/features.totalLines, /*blankLines*/features.blankLines, /*totalVars*/features.totalVars, /*varTypes*/varTypesCopy, /*totalAssignments*/features.totalAssignments, /*asmtTypes*/asmtTypesCopy, /*totalWhiles*/features.totalWhiles, /*totalIfs*/features.totalIfs, /*totalFunctionCalls*/features.totalFunctionCalls, /*aveLoopLength*/features.aveLoopLength,
 			/*aveWhileLength*/features.aveWhileLength, /*highestNestingLevel*/features.highestNestingLevel, /*remainingLinesInBlock*/rlibCopy, /*totalLoopLength*/features.totalLoopLength, /*totalWhileLength*/features.totalWhileLength, /*minimumLinesToComplete*/features.minimumLinesToComplete)
 
     return copy

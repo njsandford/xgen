@@ -3,7 +3,7 @@ uses FunctionData
 uses data.adt.Stack
 
 data FeatureVector {
-  bool isValid
+  /* bool isValid */
 }
 
 data VariableTypes {
@@ -93,7 +93,7 @@ data OperatorTypes {
   int totalNotEqu // 20
 }
 
-// Position-independent features, fixed number of features
+// Position-independent fixed set of features.
 data PIFixed extends FeatureVector {
   /* int nonBlankLines */
   int totalLines
@@ -101,19 +101,19 @@ data PIFixed extends FeatureVector {
   int totalVars
   VariableTypes varTypes
   // Number of variables used not of input Variable type
-  int nonInputVars
+  /* int nonInputVars */
   // NOTE: May need to make this a 'total' rather than average for updating each line.
   // Average number of inter-variable lines
   // int aveVarInteractions
   //int totalVarInteractions // NOTE: Difficult to work out, for now just use total assignments.
   int totalAssignments
   AssignmentTypes asmtTypes
-  int totalOperations
-  OperatorTypes opTypes
+  /* int totalOperations
+  OperatorTypes opTypes */
   int totalWhiles
   int totalIfs
   int totalFunctionCalls
-  int totalReturns // Can there be more than one?
+  /* int totalReturns // Can there be more than one? */
   // Average length of while loop
   int aveLoopLength
   // Average length of if statements
@@ -142,6 +142,8 @@ interface FeatureBuilder {
   void setMaxDeviation(int _maxDeviation)
 
   void setProvidedFeatures(PIFixed _providedFeatures)
+
+  PIFixed getProvidedFeatures()
 
   void setFunctionData(FunctionData functionData)
 

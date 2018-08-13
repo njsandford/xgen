@@ -42,6 +42,8 @@ interface Generator {
 
 	int[] worstCaseSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 
+	int calculateSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
+
 	//int countOptions(FunctionPrototype fp, int lineCount)
 	//int getIndexOf(FunctionPrototype fp, int lineCount, Option o)
 	//Option getOptionAt(FunctionPrototype fp, int lineCount, int index)

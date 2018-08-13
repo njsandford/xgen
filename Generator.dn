@@ -62,7 +62,7 @@ data Assignment {
 	char opType[] // the operator string used, e.g. "+", ">", ">=", etc.
 }
 
-/* NOTE: I think this represents a single line of a program? */
+/* Represents a single line of a program */
 data Operation {
 	Variable newVar // NOTE: What is this? Variable declaration?
 	char line[]
@@ -74,7 +74,6 @@ data Operation {
 	char opType[] // operation type, char[] representing the operation symbol used on the rhs, e.g. ==, -, +, /, etc.
 }
 
-// NOTE:
 data ParamOptions {
 	String options[]
 }
@@ -100,7 +99,7 @@ data Function {
 const int HOST_INT_SIZE = 8
 const int HOST_DEC_SIZE = 16
 
-component provides Generator requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search search, io.FileSystem fileSystem, io.File, os.SystemInfo sysInfo, doc.DocBuilder {
+component provides Generator requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search search, io.FileSystem fileSystem, io.File, os.SystemInfo sysInfo, doc.DocBuilder, util.Math math {
 
 	DataType types[] = new DataType[](
 		new DataType("int", null, new Type(Type.INTEGER, 0, HOST_INT_SIZE)),
@@ -841,7 +840,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				Assignment result[]
 
 				if (f.parameters.arrayLength == 0)
-				return new String("$prefix$(f.name)()")
+				return new Assignment("$prefix$(f.name)()")
 
 				ParamOptions params[] = new ParamOptions[f.parameters.arrayLength]
 
@@ -1193,62 +1192,50 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 		/* creates a string array of all possible valid assignments */
 		/* creates an assignment array of all possible valid assignments */
 	//	String[] getValidAssignments(int ins[], Type t)
-		Assignment[] getValidAssignments(int ins[], Type t)
+		Assignment[] getValidAssignments(int ins[], Type t, int reqAsmt)
 		{
 			//String result[]
 			Assignment result[]
 
 			//from literal values
-			//result = new String[](result, getValidLiterals(t))
-			result = new Assignment[](result, getValidLiterals(t, 1))
+			if (reqAsmt == 0 || reqAsmt == 1) result = new Assignment[](result, getValidLiterals(t, 1))
 
 			//from variables
-			//result = new String[](result, getValidVariables(ins, t))
-			result = new Assignment[](result, getValidVariables(ins, t, 2))
-
+			if (reqAsmt == 0 || reqAsmt == 2) result = new Assignment[](result, getValidVariables(ins, t, 2))
 
 			//from array indices of variables
-			//result = new String[](result, getValidVariableIndices(ins, t))
-			result = new Assignment[](result, getValidVariableIndices(ins, t, 3))
+			if (reqAsmt == 0 || reqAsmt == 3) result = new Assignment[](result, getValidVariableIndices(ins, t, 3))
 
 			//from fields of variables
-			//result = new String[](result, getValidVariableFields(ins, t))
-			result = new Assignment[](result, getValidVariableFields(ins, t, 4))
+			if (reqAsmt == 0 || reqAsmt == 4) result = new Assignment[](result, getValidVariableFields(ins, t, 4))
 
 			//from new instantiations of data types
-			//result = new String[](result, getValidDataInstantiations(t))
-			result = new Assignment[](result, getValidDataInstantiations(t, 5))
+			if (reqAsmt == 0 || reqAsmt == 5) result = new Assignment[](result, getValidDataInstantiations(t, 5))
 
 			//from new instantiations of object types
-			//result = new String[](result, getValidObjectInstantiations(ins, t))
-			result = new Assignment[](result, getValidObjectInstantiations(ins, t, 6))
+			if (reqAsmt == 0 || reqAsmt == 6) result = new Assignment[](result, getValidObjectInstantiations(ins, t, 6))
 
 			//from new instantiations of array types by size, using available integer sizes (TODO)
 
 			//from concatenations of arrays
-			//result = new String[](result, getValidArrayConcatenations(ins, t))
-			result = new Assignment[](result, getValidArrayConcatenations(ins, t, 7))
+			if (reqAsmt == 0 || reqAsmt == 7) result = new Assignment[](result, getValidArrayConcatenations(ins, t, 7))
 
 			//from cloned arrays / data
 			//result = new String[](result, getValidArrayClones(ins, t))
-			result = new Assignment[](result, getValidArrayClones(ins, t, 8))
-			//result = new String[](result, getValidDataClones(ins, t))
-			result = new Assignment[](result, getValidDataClones(ins, t, 9))
+			if (reqAsmt == 0 || reqAsmt == 8) result = new Assignment[](result, getValidArrayClones(ins, t, 8))
+			if (reqAsmt == 0 || reqAsmt == 9) result = new Assignment[](result, getValidDataClones(ins, t, 9))
 
 			//from function call results (including pseudo-functions representing operators)
-			//result = new String[](result, getValidFunctionCalls(ins, t))
-			result = new Assignment[](result, getValidFunctionCalls(ins, t, 10))
+			if (reqAsmt == 0 || reqAsmt == 10) result = new Assignment[](result, getValidFunctionCalls(ins, t, 10))
 
 			//from object call results, from any in-scope objects (global/local)
-			//result = new String[](result, getValidGlobalObjectFunctionCalls(ins, t))
-			result = new Assignment[](result, getValidGlobalObjectFunctionCalls(ins, t, 11))
-			//result = new String[](result, getValidLocalObjectFunctionCalls(ins, t))
-			result = new Assignment[](result, getValidLocalObjectFunctionCalls(ins, t, 12))
+			if (reqAsmt == 0 || reqAsmt == 11) result = new Assignment[](result, getValidGlobalObjectFunctionCalls(ins, t, 11))
+			if (reqAsmt == 0 || reqAsmt == 12) result = new Assignment[](result, getValidLocalObjectFunctionCalls(ins, t, 12))
 
 			return result
 		}
 
-		Operation[] generateAssignments(int ins[])
+		Operation[] generateAssignments(int ins[], int reqAsmt, int reqLhs)
 		{
 			Operation result[]
 
@@ -1256,81 +1243,93 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			// -- (or TO or FROM an index of an array variable, where the index is from X)
 			// -- including data types, where we can assign to/from their fields
 
-			//scan every variable, and get everything of a matching type we could assign it to
-			for (int i = 0; i < ins.arrayLength; i++)
+			if (reqLhs == 0 || reqLhs == 1)
 			{
-			//	String options[] = getValidAssignments(ins, types[ins[i]].type)
-				Assignment options[] = getValidAssignments(ins, types[ins[i]].type)
-
-				for (int j = 0; j < options.arrayLength; j++)
+				//scan every variable, and get everything of a matching type we could assign it to
+				for (int i = 0; i < ins.arrayLength; i++)
 				{
-					//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line.string)", 2))
-					// if a literal assignment, pass the literal value to the operation.
-					if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
-						result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType, options[j].line))
-					}
-					else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34) {
-						result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType, null, options[j].opType))
-					}
-					else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType))
-				}
-			}
-
-			//then scan every array, and get everything we could assign an index to
-			for (int i = 0; i < ins.arrayLength; i++)
-			{
-				if (types[ins[i]].type.class == Type.ARRAY)
-				{
-					Type subtype = types[ins[i]].type.fields[0].type
-
-					//String options[] = getValidAssignments(ins, subtype)
-					Assignment options[] = getValidAssignments(ins, subtype)
-
+					Assignment options[] = getValidAssignments(ins, types[ins[i]].type, reqAsmt)
 
 					for (int j = 0; j < options.arrayLength; j++)
 					{
-						//find every array index option to assign this to, by finding all "int" variables
-
-						for (int k = 0; k < ins.arrayLength; k++)
+						//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line.string)", 2))
+						// if a literal assignment, pass the literal value to the operation.
+						if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25)
 						{
-							if (typesMatch(getType("int").type, types[ins[k]].type))
+							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType, options[j].line))
+						}
+						else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34)
+						{
+							result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType, null, options[j].opType))
+						}
+						else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)) = $(options[j].line)", 2, 0, 0, options[j].asmtType))
+					}
+				}
+			}
+
+			if (reqLhs == 0 || reqLhs == 2)
+			{
+				//then scan every array, and get everything we could assign an index to
+				for (int i = 0; i < ins.arrayLength; i++)
+				{
+					if (types[ins[i]].type.class == Type.ARRAY)
+					{
+						Type subtype = types[ins[i]].type.fields[0].type
+
+						Assignment options[] = getValidAssignments(ins, subtype, reqAsmt)
+
+
+						for (int j = 0; j < options.arrayLength; j++)
+						{
+							//find every array index option to assign this to, by finding all "int" variables
+
+							for (int k = 0; k < ins.arrayLength; k++)
 							{
-								//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)", 2))
-								if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
-									result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType), options[j].line))
+								if (typesMatch(getType("int").type, types[ins[k]].type))
+								{
+									//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].string)", 2))
+									if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25)
+									{
+										result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType), options[j].line))
+									}
+									else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34)
+									{
+										result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType), null, options[j].opType))
+									}
+									else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType)))
 								}
-								else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34) {
-									result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType), null, options[j].opType))
-								}
-								else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i))[locv_$(iu.intToString(k))] = $(options[j].line)", 2, 0, 0, (12 + options[j].asmtType)))
 							}
 						}
 					}
 				}
 			}
 
-			//then scan every data type, and get everything we could assign each of its fields to
-			for (int i = 0; i < ins.arrayLength; i++)
+			if (reqLhs == 0 || reqLhs == 3)
 			{
-				if (types[ins[i]].type.class == Type.DATA)
+				//then scan every data type, and get everything we could assign each of its fields to
+				for (int i = 0; i < ins.arrayLength; i++)
 				{
-					for (int n = 0; n < types[ins[i]].type.fields.arrayLength; n++)
+					if (types[ins[i]].type.class == Type.DATA)
 					{
-						Type subtype = types[ins[i]].type.fields[n].type
-
-						//String options[] = getValidAssignments(ins, subtype)
-						Assignment options[] = getValidAssignments(ins, subtype)
-
-						for (int j = 0; j < options.arrayLength; j++)
+						for (int n = 0; n < types[ins[i]].type.fields.arrayLength; n++)
 						{
-							//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)", 2))
-							if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25) {
-								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType), options[j].line))
+							Type subtype = types[ins[i]].type.fields[n].type
+
+							Assignment options[] = getValidAssignments(ins, subtype, reqAsmt)
+
+							for (int j = 0; j < options.arrayLength; j++)
+							{
+								//result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].string)", 2))
+								if (options[j].asmtType == 1 || options[j].asmtType == 13 || options[j].asmtType == 25)
+								{
+									result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType), options[j].line))
+								}
+								else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34)
+								{
+									result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType), null, options[j].opType))
+								}
+								else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType)))
 							}
-							else if (options[j].asmtType == 10 || options[j].asmtType == 22 || options[j].asmtType == 34) {
-								result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType), null, options[j].opType))
-							}
-							else result = new Operation[](result, new Operation(null, "locv_$(iu.intToString(i)).$(types[ins[i]].type.fields[n].name) = $(options[j].line)", 2, 0, 0, (24 + options[j].asmtType)))
 						}
 					}
 				}
@@ -1370,7 +1369,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return result
 		}
 
-		Operation[] generateControlBlocks(int ins[], int remainingLines)
+		Operation[] generateControlBlocks(int ins[], int remainingLines, int reqControl)
 			{
 			Operation result[]
 
@@ -1388,11 +1387,11 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 						{
 						// - if statements
 
-						result = new Operation[](result, new Operation(null, "if (locv_$(iu.intToString(i)))", 3, j))
+						if (reqControl == 0 || reqControl == 1) result = new Operation[](result, new Operation(null, "if (locv_$(iu.intToString(i)))", 3, j))
 
 						// - while loops
 
-						result = new Operation[](result, new Operation(null, "while (locv_$(iu.intToString(i)))", 4, j))
+						if (reqControl == 0 || reqControl == 2) result = new Operation[](result, new Operation(null, "while (locv_$(iu.intToString(i)))", 4, j))
 
 						//NOTE: we may want to add " == false" versions too...
 						}
@@ -1402,7 +1401,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return result
 			}
 
-		Operation[] generateOperations(int ins[], int remainingLines, bool noDeclarations, bool blank, bool outerScope, String paramTypes[])
+		Operation[] generateOperations(int ins[], int remainingLines, bool noDeclarations, bool blank, bool outerScope, String paramTypes[], int reqAsmt, int reqLhs, int reqControl, int reqOperation)
 		{
 			Operation result[]
 
@@ -1419,17 +1418,17 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				else {
 					//all assignments of any in-scope variable to X (where X is any in-scope variable, or any function call, or any literal from a subsampled set of options)
 					// - function parameters will need every option from X, up to a max. nesting depth
-					result = new Operation[](result, generateAssignments(ins))
+					if (reqOperation == 0 || reqOperation == 1) result = new Operation[](result, generateAssignments(ins, reqAsmt, reqLhs))
 
 					//all function calls on objects (not using their return values)
-					result = new Operation[](result, generateLocalObjectCalls(ins))
+					if (reqOperation == 0 || reqOperation == 2) result = new Operation[](result, generateLocalObjectCalls(ins))
 
 					//all return options (TODO)
 
 					//all calls of local functions (TODO)
 
 					//all control flow blocks, using X (boolean) in its header, of every possible length from 1 to (max_lines - here)
-					result = new Operation[](result, generateControlBlocks(ins, remainingLines))
+					if (reqOperation == 0 || reqOperation == 3) result = new Operation[](result, generateControlBlocks(ins, remainingLines, reqControl))
 				}
 
 			}
@@ -1486,7 +1485,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 
 		// NOTE: convert operations to nodes -- modify this! could a node include an operation?
 		// Maybe this is where the feature builder should be called to build features for each node? (instead of in buildLines)
-		NodeSet buildNextLine(Node n, int remainingLines, bool outerScope, FeatureBuilder featureBuilder) // , FeatureVector features) // Add the featureVector to compare current program to.
+		NodeSet buildNextLine(Node n, int remainingLines, bool outerScope, FeatureBuilder featureBuilder, int reqAsmt, int reqLhs, int reqControl, int reqOperation) // , FeatureVector features) // Add the featureVector to compare current program to.
 		{
 			Node result[]
 
@@ -1509,7 +1508,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				return new NodeSet(n.optionsCache, start, length)
 			}
 
-			Operation ops[] = generateOperations(n.inScope, remainingLines, n.declarationsComplete, n.blankLines, outerScope, featureBuilder.getParameterTypes())
+			Operation ops[] = generateOperations(n.inScope, remainingLines, n.declarationsComplete, n.blankLines, outerScope, featureBuilder.getParameterTypes(), reqAsmt, reqLhs, reqControl, reqOperation)
 			for (int j = 0; j < ops.arrayLength; j++)
 			{
 				/*  ("Option $(iu.intToString(j)): $(ops[j].line), lineType: $(iu.intToString(ops[j].lineType)), decType: $(iu.intToString(ops[j].decType)), asmtType: $(iu.intToString(ops[j].asmtType))") */
@@ -1657,7 +1656,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			{
 				int linesRemaining = globalLineCount - 1
 
-				NodeSet opSet = buildNextLine(start, lineCount, addReturn, featureBuilder)
+				NodeSet opSet = buildNextLine(start, lineCount, addReturn, featureBuilder, 0, 0, 0, 0)
 				Node options[] = opSet.options
 
 				//Node options[] = buildTree_summary(start, lineCount)
@@ -1954,7 +1953,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					nxt.lines = new int[](start.lines, 0)
 				}
 				else {
-					NodeSet opSet = buildNextLine(start, lineCount, addReturn, featureBuilder)
+					NodeSet opSet = buildNextLine(start, lineCount, addReturn, featureBuilder, 0, 0, 0, 0)
 					Node options[] = opSet.options
 
 					if (options == null)
@@ -1991,7 +1990,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			{
 				//add return statements, for every possible variable that matches our return type...
 				Node options[] = buildReturns(start, returnType)
-				out.println("Original return options length: $(iu.intToString(options.arrayLength))")
+				/* out.println("Original return options length: $(iu.intToString(options.arrayLength))") */
 
 				int ndx = rgen.get(options.arrayLength)
 
@@ -2218,7 +2217,6 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return lineOptions
 		}
 
-
 		int[] Generator:worstCaseSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
 			out.println("... calculating worst case search space size ...")
@@ -2333,10 +2331,175 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return lineOptions
 		}
 
-		Node[] getAcceptedOptions(Node root, int linesRemaining, bool outerScope, FeatureBuilder featureBuilder, FunctionPrototype fp) {
-			NodeSet opSet = buildNextLine(root, linesRemaining, outerScope, featureBuilder)
-			Node options[] = opSet.options
+		int intPower(int value, int power) {
+			if (power == 2) return value * value
+			else if (power == 1) return value
+			else if (power == 0) return 1
+			else return value * intPower(value, power - 1)
+		}
 
+		int Generator:calculateSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
+		{
+			out.println("... calculating search space size ...")
+
+			int lineOptions[] = new int[]
+			/* int totalAcceptedOptions = 0 */
+
+			PermutationSet ps = new PermutationSet(lineCount, lineCount, maxOptions)
+
+			testFunction = fp
+			featureBuilder.setParameterTypes(fp.parameterTypes)
+
+			int ins[] = null
+
+			for (int i = 0; i < fp.parameterTypes.arrayLength; i++)
+			{
+				ins = new int[](ins, getTypeIndex(getType(fp.parameterTypes[i].string).type))
+			}
+
+			// NOTE: specify at the start whether or not to do any variable declarations
+			bool declarationsComplete = false
+			if (featureBuilder.totalVarsRequired() == 0) declarationsComplete == true
+
+			Node root = new Node(null, !declarationsComplete, ins)
+			int j = 0
+			Node nextNode = root
+			Node accepted[] = new Node[]
+			// For each line of program, calculate the number of options available.
+			int i = lineCount
+			/* for (int i = lineCount; i > 0; i--) */
+			for (int n = featureBuilder.totalVarsRequired(); n > 0; n--)
+			{
+				Node currentNode = clone nextNode
+
+				accepted = getAcceptedOptions(nextNode, i, true, featureBuilder, fp)
+				out.println("Option for line $(iu.intToString(j)): $(accepted[0].lineInfo.line)")///$(iu.intToString(options.arrayLength))")
+				if (accepted.arrayLength == 0) out.println("No options accepted!")
+				else nextNode = accepted[0] // doesn't matter which options is chosen as the last option, as there will be no further options.
+
+				lineOptions = new int[](lineOptions, accepted.arrayLength)
+				out.println("Options for line $(iu.intToString(j)): $(iu.intToString(accepted.arrayLength))")///$(iu.intToString(options.arrayLength))")
+				j++
+				i--
+			}
+
+			// Add all declarations
+
+			out.println("declarations complete)")
+			/* --- Declaration lines have been added --- */
+
+			Node parentNode = clone nextNode
+			PIFixed providedFeatures = featureBuilder.getProvidedFeatures()
+			int linesRemaining = lineCount - providedFeatures.totalVars
+			bool outerScope = true
+
+			// Check each option of the provided features
+			// if there are assignments, for each one, make a note of how many, then get all options for that feature ONLY and then pass to fb to see how many are accepted.
+			// Then multiply the number accepted to the power of how many are required.
+
+			int non_declaration_lines = linesRemaining
+			int search_space_size = 1
+			// Check assignment features
+			if (providedFeatures.totalAssignments > 0)
+			{
+				// Check the individual assignment types:
+				AssignmentTypes asmtTypes = clone providedFeatures.asmtTypes
+				if (asmtTypes.totalVarToLit > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToLit
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 1, 1, 0, 0)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
+
+					int total_feature_combinations = intPower(accepted_feature_options.arrayLength, current_feature_quantity) //math.power(accepted_feature_options.arrayLength, current_feature_quantity)
+					out.println("total var to lit combinations: $(iu.intToString(accepted_feature_options.arrayLength)) ^ $(iu.intToString(current_feature_quantity)) = $(iu.intToString(total_feature_combinations))")
+					search_space_size = search_space_size * total_feature_combinations
+				}
+				if (asmtTypes.totalVarToVar > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToVar
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 2, 1, 0, 0)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
+					int total_feature_combinations = intPower(accepted_feature_options.arrayLength, current_feature_quantity) //math.power(accepted_feature_options.arrayLength, current_feature_quantity)
+					out.println("total var to var combinations: $(iu.intToString(accepted_feature_options.arrayLength)) ^ $(iu.intToString(current_feature_quantity)) = $(iu.intToString(total_feature_combinations))")
+					search_space_size = search_space_size * total_feature_combinations
+				}
+				if (asmtTypes.totalVarToInd > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToInd
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 3, 1, 0, 0)
+				}
+				if (asmtTypes.totalVarToField > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToField
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 4, 1, 0, 0)
+				}
+				if (asmtTypes.totalVarToData > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToData
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 5, 1, 0, 0)
+				}
+				if (asmtTypes.totalVarToObj > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToObj
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 6, 1, 0, 0)
+				}
+				if (asmtTypes.totalVarToArrConcat > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToArrConcat
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 7, 1, 0, 0)
+				}
+				if (asmtTypes.totalVarToArrClone > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToArrClone
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 8, 1, 0, 0)
+				}
+				if (asmtTypes.totalVarToDataClone > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToDataClone
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 9, 1, 0, 0)
+				}
+				if (asmtTypes.totalVarToFunc > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToFunc
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 10, 1, 0, 0)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
+					int total_feature_combinations = intPower(accepted_feature_options.arrayLength, current_feature_quantity) //math.power(accepted_feature_options.arrayLength, current_feature_quantity)
+					out.println("total var to func combinations: $(iu.intToString(accepted_feature_options.arrayLength)) ^ $(iu.intToString(current_feature_quantity)) = $(iu.intToString(total_feature_combinations))")
+					search_space_size = search_space_size * total_feature_combinations
+				}
+				if (asmtTypes.totalVarToGOFunc > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToGOFunc
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 11, 1, 0, 0)
+				}
+				if (asmtTypes.totalVarToLOFunc > 0)
+				{
+					int current_feature_quantity = asmtTypes.totalVarToLOFunc
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 12, 1, 0, 0)
+				}
+			}
+
+			Node returnOptions[] = buildReturns(nextNode, fp.returnType)
+			int sss_copy = search_space_size
+			search_space_size = search_space_size * returnOptions.arrayLength
+
+			out.println("search space size: $(iu.intToString(sss_copy)) * $(iu.intToString(returnOptions.arrayLength)) = $(iu.intToString(search_space_size))")
+			return search_space_size
+		}
+
+		Node[] getAcceptedOptions(Node root, int linesRemaining, bool outerScope, FeatureBuilder featureBuilder, FunctionPrototype fp)
+		{
+			NodeSet opSet = buildNextLine(root, linesRemaining, outerScope, featureBuilder, 0, 0, 0, 0)
+			Node options[] = opSet.options
+			Node accepted[] = filterAcceptedOptions(opSet, options, root, linesRemaining, featureBuilder)
+			return accepted
+		}
+
+		Node[] filterAcceptedOptions(NodeSet opSet, Node options[], Node root, int linesRemaining, FeatureBuilder featureBuilder)
+		{
 			Node accepted[] = new Node[]
 			for (int n = opSet.start; n < opSet.length; n++)
 			{
@@ -2352,14 +2515,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				if (!rejectBranch)
 				{
 					accepted = new Node[](accepted, clone options[n]) // Accepted option, add to array
-					/* out.println("accepted option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)") */
+					out.println("accepted option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)")
 				}
 				/* else
 				{
 					out.println("rejected option $(iu.intToString(n)) for linesRemaining: $(iu.intToString(linesRemaining)): $(options[n].lineInfo.line)")
 				} */
 			}
-
 			/* for (int j = 0; j < accepted.arrayLength; j++) {
 				out.println("option $(iu.intToString(j)): $(decodeOption(fp, accepted[j], featureBuilder))")
 			} */
@@ -2469,7 +2631,7 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				}
 				else
 				{
-					options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null, fp.parameterTypes)
+					options = generateOperations(top.ins, top.remainingLines, declarationsComplete, blankLines, top.next == null, fp.parameterTypes, 0, 0, 0, 0)
 					/* out.println("Normal options length: $(iu.intToString(options.arrayLength))") */
 				}
 				/* out.println("options: $(iu.intToString(options.arrayLength)), leaf line: $(iu.intToString(i)), line val: $(iu.intToString(leaf.lines[i]))")

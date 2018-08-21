@@ -1,0 +1,3 @@
+interface IntReturnFunction {
+	int function()
+	}

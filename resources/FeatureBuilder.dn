@@ -3,6 +3,7 @@ uses FunctionData
 uses data.adt.Stack
 
 data FeatureVector {
+  int totalLines
   /* bool isValid */
 }
 
@@ -96,7 +97,7 @@ data OperatorTypes {
 // Position-independent fixed set of features.
 data PIFixed extends FeatureVector {
   /* int nonBlankLines */
-  int totalLines
+  /* int totalLines */
   int blankLines
   int totalVars
   VariableTypes varTypes
@@ -115,9 +116,11 @@ data PIFixed extends FeatureVector {
   int totalFunctionCalls
   /* int totalReturns // Can there be more than one? */
   // Average length of while loop
-  int aveLoopLength
+  /* int aveLoopLength */
   // Average length of if statements
-  int aveWhileLength
+  /* int aveWhileLength */
+  int minBlockLength
+  int maxBlockLength
   int highestNestingLevel
   // -- temporary values for getting highestNestingLevel and aveLoopLenth --
   Stack remainingLinesInBlock // Stack representing the lines remaining to be filled in each control block.

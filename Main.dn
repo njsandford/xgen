@@ -149,28 +149,33 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		char buildInterface[] = "IntFunction"
 		int lineCount = 1 */
 
-		char unitTests[] = "input_string_reverse.txt"
+		/* char unitTests[] = "input_string_reverse.txt"
 		char testProgram[] = "UnitTest_String_Reverse.o"
 		char buildInterface[] = "StringStringFunction"
-		int lineCount = 7
+		int lineCount = 7 */
 
 		/* char unitTests[] = "input_string_arr_count.txt"
 		char testProgram[] = "UnitTest_String_Arr_Count.o"
 		char buildInterface[] = "IntStringFunction"
-		int lineCount = 4 */
+		int lineCount = 9 */
+
+		char unitTests[] = "input_string_arr_count.txt"
+		char testProgram[] = "UnitTest_String_Arr_Count.o"
+		char buildInterface[] = "IntReturnFunction"
+		int lineCount = 5
 
 		/* char unitTests[] = "input_search_count.txt"
 		char testProgram[] = "UnitTest_SearchCount.o"
 		char buildInterface[] = "Int_IntArray_Int_Function"
 		int lineCount = 6 */
 
-		String operatorTypes[] = new String[](new String("+"))//, new String("-"))//new String("arrayLength"), , new String("<"), new String("=="))
-		String literalVals[] = new String[](new String("1"), new String("0"), new String("true"))
+		String operatorTypes[] = new String[](new String("+"), new String("<"), new String("arrayLength"))//, new String("-"))//new String("arrayLength"), , new String("<"), new String("=="))
+		String literalVals[] = new String[](new String("1"))//, new String("0"), new String("true"))
 
 		VariableTypes varTypes = new VariableTypes(/*totalInts*/1, /*totalDecs*/1, /*totalChars*/0, /*totalBools*/1, /*totalDatas*/0, /*totalIntArrs*/0,
 			/*totalDecArrs*/0, /*totalCharArrs*/0, /*totalBoolArrs*/0, /*totalDataArrs*/0, /*totalObjs*/0, /*totalObjArrs*/0, /*totalFuncArrs*/0)
-		AssignmentTypes asmtTypes = new AssignmentTypes(/*totalVarToLit*/4, /*totalVarToVar*/0, /*totalVarToInd*/0, /*totalVarToField*/0, /*totalVarToData*/0,
-			/*totalVarToObj*/0, /*totalVarToArrConcat*/0, /*totalVarToArrClone*/0, /*totalVarToDataClone*/0, /*totalVarToFunc*/0, /*totalVarToGOFunc*/0, /*totalVarToLOFunc*/0,
+		AssignmentTypes asmtTypes = new AssignmentTypes(/*totalVarToLit*/1, /*totalVarToVar*/0, /*totalVarToInd*/0, /*totalVarToField*/0, /*totalVarToData*/0,
+			/*totalVarToObj*/0, /*totalVarToArrConcat*/0, /*totalVarToArrClone*/0, /*totalVarToDataClone*/0, /*totalVarToFunc*/1, /*totalVarToGOFunc*/0, /*totalVarToLOFunc*/0,
 			/*totalIndToLit*/0, /*totalIndToVar*/0, /*totalIndToInd*/0, /*totalIndToField*/0, /*totalIndToData*/0, /*totalIndToObj*/0, /*totalIndToArrConcat*/0,
 			/*totalIndToArrClone*/0, /*totalIndToDataClone*/0, /*totalIndToFunc*/0, /*totalIndToGOFunc*/0, /*totalIndToLOFunc*/0,
 			/*totalDataToLit*/0, /*totalDataToVar*/0, /*totalDataToInd*/0, /*totalDataToField*/0, /*totalDataToData*/0, /*totalDataToObj*/0, /*totalDataToArrConcat*/0,
@@ -180,8 +185,10 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		/* PIFixed providedFeatures = new PIFixed(lineCount, 21, 6, 0, 8, 1, 1, 0, 1, 7, 1, 1, null, 0, 0, 0) */
 		/* PIFixed providedFeatures = new PIFixed(lineCount, lineCount, 6, 0, 8, 1, 1, 0, 0, 0, 0, 1, null, 0, 0, 0) */
 //		PIFixed providedFeatures = new PIFixed(/*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/0, /*nonInputVars*/0, /*totalAssignments*/1, /*totalWhiles*/0, /*totalIfs*/0, /*totalFunctionCalls*/0, /*totalReturns*/0, /*aveLoopLength*/0, /*aveWhileLength*/0, /*highestNestingLevel*/0, /*remainingLinesInBlock*/null, /*totalLoopLength*/0, /*totalWhileLength*/0, /*minimumLinesToComplete*/0)
-		PIFixed providedFeatures = new PIFixed(/*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/3, /*varTypes*/varTypes, /*totalAssignments*/4, /*asmtTypes*/asmtTypes, /*totalWhiles*/0, /*totalIfs*/0, /*totalFunctionCalls*/0, /*aveLoopLength*/0,
-			/*aveWhileLength*/0, /*highestNestingLevel*/0, /*remainingLinesInBlock*/null, /*totalLoopLength*/0, /*totalWhileLength*/0, /*minimumLinesToComplete*/0)//, /*unspecifiedLines*/0)
+//		PIFixed providedFeatures = new PIFixed(/*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/3, /*varTypes*/varTypes, /*totalAssignments*/2, /*asmtTypes*/asmtTypes, /*totalWhiles*/1, /*totalIfs*/0, /*totalFunctionCalls*/0, /*aveLoopLength*/0,
+//			/*aveWhileLength*/0, /*highestNestingLevel*/0, /*remainingLinesInBlock*/null, /*totalLoopLength*/0, /*totalWhileLength*/0, /*minimumLinesToComplete*/0)//, /*unspecifiedLines*/0)
+		PIFixed providedFeatures = new PIFixed(/*totalLines*/lineCount, /*blankLines*/0, /*totalVars*/3, /*varTypes*/varTypes, /*totalAssignments*/2, /*asmtTypes*/asmtTypes, /*totalWhiles*/0, /*totalIfs*/0, /*totalFunctionCalls*/0, /*minBlockLength*/0,
+			/*maxBlockLength*/0, /*highestNestingLevel*/0, /*remainingLinesInBlock*/null, /*totalLoopLength*/0, /*totalWhileLength*/0, /*minimumLinesToComplete*/0)//, /*unspecifiedLines*/0)
 
 		int maxDeviation = 0 // Change this as neccesary.
 		// pass this to FeatureBuilder

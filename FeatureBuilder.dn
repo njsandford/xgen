@@ -163,11 +163,13 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
   /* FeatureVector doUpdate(Node currentNode) { */
   PIFixed doUpdate(PIFixed existingFV, int lineType, char newLine[], int subLinesCount, int decType, int asmtType, char rhsAssign[], char rhsOpType[]) {
     //Node node = clone currentNode
-    PIFixed update = clone existingFV //node.features
+    PIFixed update = copyFeatures(existingFV) //clone existingFV //node.features
     /* update.nonBlankLines += 1 */
     //Operation lineInfo = node.lineInfo
     String tokens[] = getLineComponents(newLine)
     // Check if we are currently within a subscope:
+    update.minBlockLength = 0
+    update.maxBlockLength = 0
     if (update.remainingLinesInBlock.getLength() != 0) {
       LineInfo lineInfo = update.remainingLinesInBlock.peek()
       if (lineInfo.linesRemaining == 0) {
@@ -304,8 +306,14 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       // 3 = if statement
       update.totalIfs += 1
       // update average if statement length
-      update.totalLoopLength += subLinesCount
-      update.aveLoopLength = update.totalLoopLength / update.totalIfs
+      /* update.totalLoopLength += subLinesCount
+      update.aveLoopLength = update.totalLoopLength / update.totalIfs */
+      /* if (subLinesCount < update.minBlockLength)  */
+      update.minBlockLength = subLinesCount
+      /* out.println("minBlockLength = $(iu.intToString(update.minBlockLength))") */
+      /* if (update.maxBlockLength == 0 || subLinesCount > update.maxBlockLength)  */
+      update.maxBlockLength = subLinesCount
+      /* out.println("maxBlockLength = $(iu.intToString(update.maxBlockLength))") */
       // Update control block nesting info
       LineInfo nextCount = new LineInfo(subLinesCount)
       update.remainingLinesInBlock.add(nextCount)
@@ -319,8 +327,14 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       update.totalWhiles += 1
       /* out.println("total whiles incremented to: $(iu.intToString(update.totalWhiles))") */
       // Update average while loop length
-      update.totalWhileLength += subLinesCount
-      update.aveWhileLength = update.totalWhileLength / update.totalWhiles
+      /* update.totalWhileLength += subLinesCount */
+      /* if (subLinesCount < update.minBlockLength)  */
+      update.minBlockLength = subLinesCount
+      /* out.println("minBlockLength = $(iu.intToString(update.minBlockLength))") */
+      /* if (update.maxBlockLength == 0 || subLinesCount > update.maxBlockLength)  */
+      update.maxBlockLength = subLinesCount
+      /* out.println("maxBlockLength = $(iu.intToString(update.maxBlockLength))") */
+      /* update.aveWhileLength = update.totalWhileLength / update.totalWhiles */
       // Update control block nesting info
       LineInfo nextCount = new LineInfo(subLinesCount)
       update.remainingLinesInBlock.add(nextCount)
@@ -378,10 +392,16 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
       // Check each asmtType now:
     }
     if (current.totalWhiles < providedFeatures.totalWhiles) {
-      if (((providedFeatures.totalWhiles - current.totalWhiles) * 2) > linesRemaining) return false // Minimum lines to make a control block is 2 lines
+      int minWhileLen = 1 // at least 1 line for the while statement
+      if (providedFeatures.minBlockLength > 0) minWhileLen += providedFeatures.minBlockLength // Plus the minumum block length
+      else minWhileLen += 1 // if no min, then while must contain at least 1 line.
+      if (((providedFeatures.totalWhiles - current.totalWhiles) * minWhileLen) > linesRemaining) return false
       minRequired += providedFeatures.totalWhiles - current.totalWhiles
     }
     if (current.totalIfs < providedFeatures.totalIfs) {
+      int minIfLen = 1 // at least 1 line for the if statement
+      if (providedFeatures.minBlockLength > 0) minIfLen += providedFeatures.minBlockLength // Plus the minumum block length
+      else minIfLen += 1 // if no min, then if must contain at least 1 line.
       if (((providedFeatures.totalIfs - current.totalIfs) * 2) > linesRemaining) return false // Minimum lines to make a control block is 2 lines
       minRequired += providedFeatures.totalIfs - current.totalIfs
     }
@@ -486,6 +506,12 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     if (currentFeatures.totalIfs > providedFeatures.totalIfs) {
       return true
     }
+    if (providedFeatures.minBlockLength > 0 && currentFeatures.minBlockLength > 0 && currentFeatures.minBlockLength < providedFeatures.minBlockLength) {
+      return true
+    }
+    if (providedFeatures.maxBlockLength > 0 && currentFeatures.maxBlockLength > 0 && currentFeatures.maxBlockLength > providedFeatures.maxBlockLength) {
+      return true
+    }
     /* if (currentFeatures.highestNestingLevel > providedFeatures.highestNestingLevel) {
       return true
     } */
@@ -503,8 +529,8 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     totalDistance += differenceBetweenInts(lhs.totalWhiles, rhs.totalWhiles)
     totalDistance += differenceBetweenInts(lhs.totalIfs, rhs.totalIfs)
     /* totalDistance += getAbsValue(lhs.totalFunctionCalls - rhs.totalFunctionCalls) */
-    totalDistance += differenceBetweenInts(lhs.aveLoopLength, rhs.aveLoopLength)
-    totalDistance += differenceBetweenInts(lhs.aveWhileLength, rhs.aveWhileLength)
+    /* totalDistance += differenceBetweenInts(lhs.aveLoopLength, rhs.aveLoopLength) */
+    /* totalDistance += differenceBetweenInts(lhs.aveWhileLength, rhs.aveWhileLength) */
     totalDistance += differenceBetweenInts(lhs.highestNestingLevel, rhs.highestNestingLevel)
     return totalDistance
   }
@@ -873,8 +899,10 @@ component provides FeatureBuilder requires data.adt.Stack, data.StringUtil su, i
     /* OperatorTypes opTypesCopy = clone features.opTypes */
     /* asmtTypesCopy.literalValue = "5" */
     Stack rlibCopy = features.remainingLinesInBlock//.clone()
-    PIFixed copy = new PIFixed(/*totalLines*/features.totalLines, /*blankLines*/features.blankLines, /*totalVars*/features.totalVars, /*varTypes*/varTypesCopy, /*totalAssignments*/features.totalAssignments, /*asmtTypes*/asmtTypesCopy, /*totalWhiles*/features.totalWhiles, /*totalIfs*/features.totalIfs, /*totalFunctionCalls*/features.totalFunctionCalls, /*aveLoopLength*/features.aveLoopLength,
-			/*aveWhileLength*/features.aveWhileLength, /*highestNestingLevel*/features.highestNestingLevel, /*remainingLinesInBlock*/rlibCopy, /*totalLoopLength*/features.totalLoopLength, /*totalWhileLength*/features.totalWhileLength, /*minimumLinesToComplete*/features.minimumLinesToComplete)
+//    PIFixed copy = new PIFixed(/*totalLines*/features.totalLines, /*blankLines*/features.blankLines, /*totalVars*/features.totalVars, /*varTypes*/varTypesCopy, /*totalAssignments*/features.totalAssignments, /*asmtTypes*/asmtTypesCopy, /*totalWhiles*/features.totalWhiles, /*totalIfs*/features.totalIfs, /*totalFunctionCalls*/features.totalFunctionCalls, /*aveLoopLength*/features.aveLoopLength,
+//			/*aveWhileLength*/features.aveWhileLength, /*highestNestingLevel*/features.highestNestingLevel, /*remainingLinesInBlock*/rlibCopy, /*totalLoopLength*/features.totalLoopLength, /*totalWhileLength*/features.totalWhileLength, /*minimumLinesToComplete*/features.minimumLinesToComplete)
+    PIFixed copy = new PIFixed(/*totalLines*/features.totalLines, /*blankLines*/features.blankLines, /*totalVars*/features.totalVars, /*varTypes*/varTypesCopy, /*totalAssignments*/features.totalAssignments, /*asmtTypes*/asmtTypesCopy, /*totalWhiles*/features.totalWhiles, /*totalIfs*/features.totalIfs, /*totalFunctionCalls*/features.totalFunctionCalls, /*aveLoopLength*/features.minBlockLength,
+			/*aveWhileLength*/features.maxBlockLength, /*highestNestingLevel*/features.highestNestingLevel, /*remainingLinesInBlock*/rlibCopy, /*totalLoopLength*/features.totalLoopLength, /*totalWhileLength*/features.totalWhileLength, /*minimumLinesToComplete*/features.minimumLinesToComplete)
 
     return copy
   }

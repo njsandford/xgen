@@ -15,6 +15,7 @@ component provides IntStringFunction {
     {
       count = count + increment
       increment = increment + increment
+			condition = i < strLength
     }
     return count
 	}

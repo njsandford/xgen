@@ -1707,7 +1707,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 					bool rejectEarly = featureBuilder.rejectEarly(options[i].features, linesRemaining) */
 
 					//PIFixed newFeatures
-					options[i].features = featureBuilder.updateFeatureVector(ori_features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign, lineInfo.opType)
+					int currentSubLinesCount = 0
+					SearchScope currentSS = options[i].subLines
+					if (currentSS != null) currentSubLinesCount = currentSS.subLinesCount
+					options[i].features = featureBuilder.updateFeatureVector(ori_features, lineInfo.lineType, lineInfo.line, currentSubLinesCount, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign, lineInfo.opType)
 					/* out.println("literal val: $(lineInfo.rhsAssign)") */
 					/* options[i].features = featureBuilder.copyFeatures(newFeatures) */
 					/* out.println("before declarationsComplete: $(iu.intToString(options[i].declarationsComplete))") */
@@ -2351,6 +2354,13 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 			return denominator / numerator
 		}
 
+		int updateSearchSpaceSize(int search_space_size, int current_feature_quantity, int accepted_options) {
+			int total_feature_combinations = intPower(accepted_options, current_feature_quantity)
+			out.println("total feature combinations: $(iu.intToString(accepted_options)) ^ $(iu.intToString(current_feature_quantity)) = $(iu.intToString(total_feature_combinations))")
+			search_space_size = search_space_size * total_feature_combinations
+			return search_space_size
+		}
+
 		int Generator:calculateSearchSpaceSize(FunctionPrototype fp, int lineCount, int maxOptions, Option resumeFrom, FeatureBuilder featureBuilder)
 		{
 			out.println("... calculating search space size ...")
@@ -2386,9 +2396,9 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				Node currentNode = clone nextNode
 
 				accepted = getAcceptedOptions(nextNode, i, true, featureBuilder, fp)
-				out.println("Option for line $(iu.intToString(j)): $(accepted[0].lineInfo.line)")///$(iu.intToString(options.arrayLength))")
 				if (accepted.arrayLength == 0) out.println("No options accepted!")
 				else nextNode = accepted[0] // doesn't matter which options is chosen as the last option, as there will be no further options.
+				out.println("Option for line $(iu.intToString(j)): $(accepted[0].lineInfo.line)")///$(iu.intToString(options.arrayLength))")
 
 				lineOptions = new int[](lineOptions, accepted.arrayLength)
 				out.println("Options for line $(iu.intToString(j)): $(iu.intToString(accepted.arrayLength))")///$(iu.intToString(options.arrayLength))")
@@ -2422,85 +2432,126 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				{
 					int current_feature_quantity = asmtTypes.totalVarToLit
 					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 1, 1, 0, 0)
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 1, 1, 0, 1)
 					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
-					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
-
-					int total_feature_combinations = intPower(accepted_feature_options.arrayLength, current_feature_quantity) //math.power(accepted_feature_options.arrayLength, current_feature_quantity)
-					out.println("total var to lit combinations: $(iu.intToString(accepted_feature_options.arrayLength)) ^ $(iu.intToString(current_feature_quantity)) = $(iu.intToString(total_feature_combinations))")
-					search_space_size = search_space_size * total_feature_combinations
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToVar > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToVar
 					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 2, 1, 0, 0)
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 2, 1, 0, 1)
 					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
-					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
-					int total_feature_combinations = intPower(accepted_feature_options.arrayLength, current_feature_quantity) //math.power(accepted_feature_options.arrayLength, current_feature_quantity)
-					out.println("total var to var combinations: $(iu.intToString(accepted_feature_options.arrayLength)) ^ $(iu.intToString(current_feature_quantity)) = $(iu.intToString(total_feature_combinations))")
-					search_space_size = search_space_size * total_feature_combinations
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToInd > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToInd
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 3, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 3, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToField > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToField
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 4, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 4, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToData > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToData
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 5, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 5, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToObj > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToObj
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 6, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 6, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToArrConcat > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToArrConcat
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 7, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 7, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToArrClone > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToArrClone
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 8, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 8, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToDataClone > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToDataClone
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 9, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 9, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToFunc > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToFunc
 					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 10, 1, 0, 0)
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 10, 1, 0, 1)
 					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
-					out.println("Options: $(iu.intToString(current_options.options.arrayLength))")///$(iu.intToString(options.arrayLength))")
-					int total_feature_combinations = intPower(accepted_feature_options.arrayLength, current_feature_quantity) //math.power(accepted_feature_options.arrayLength, current_feature_quantity)
-					out.println("total var to func combinations: $(iu.intToString(accepted_feature_options.arrayLength)) ^ $(iu.intToString(current_feature_quantity)) = $(iu.intToString(total_feature_combinations))")
-					search_space_size = search_space_size * total_feature_combinations
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToGOFunc > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToGOFunc
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 11, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 11, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 				if (asmtTypes.totalVarToLOFunc > 0)
 				{
 					int current_feature_quantity = asmtTypes.totalVarToLOFunc
-					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 12, 1, 0, 0)
+					if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+					NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 12, 1, 0, 1)
+					Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+					search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
 				}
 			}
+			if (providedFeatures.totalFunctionCalls > 0) {
+				int current_feature_quantity = providedFeatures.totalFunctionCalls
+				if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+				NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 0, 0, 0, 2)
+				Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+				search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
+			}
+			/* if (providedFeatures.totalIfs > 0) {
+				has_control_block = true
+				int current_feature_quantity = providedFeatures.totalIfs
+				if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+				NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 0, 0, 1, 3)
+				Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+				search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
+			}
+			if (providedFeatures.totalWhiles > 0) {
+				has_control_block = true
+				int current_feature_quantity = providedFeatures.totalWhiles
+				if (min_feature_quantity == 0 || current_feature_quantity > min_feature_quantity) min_feature_quantity = current_feature_quantity
+				NodeSet current_options = buildNextLine(parentNode, linesRemaining, outerScope, featureBuilder, 0, 0, 2, 3)
+				Node accepted_feature_options[] = filterAcceptedOptions(current_options, current_options.options, parentNode, linesRemaining, featureBuilder)
+				search_space_size = updateSearchSpaceSize(search_space_size, current_feature_quantity, accepted_feature_options.arrayLength)
+			} */
 
 			Node returnOptions[] = buildReturns(nextNode, fp.returnType)
 			int sss_copy = search_space_size
+			/* if (has_control_block) non_declaration_lines-- */
 			int combinations = optionCombinations(non_declaration_lines, min_feature_quantity)
 			search_space_size = search_space_size * returnOptions.arrayLength * combinations
 			/* int factorial = factorial(4) */
@@ -2527,7 +2578,10 @@ component provides Generator requires io.Output out, data.IntUtil iu, data.Strin
 				/* linesRemaining -- */
 				Operation lineInfo = options[n].lineInfo
 				/* nextNode = options[0] // chose the first node. NOTE: update this to identify the worst case node and select that instead. */
-				options[n].features = featureBuilder.updateFeatureVector(root.features, lineInfo.lineType, lineInfo.line, lineInfo.lineType, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign, lineInfo.opType)
+				int currentSubLinesCount = 0
+				SearchScope currentSS = options[n].subLines
+				if (currentSS != null) currentSubLinesCount = currentSS.subLinesCount
+				options[n].features = featureBuilder.updateFeatureVector(root.features, lineInfo.lineType, lineInfo.line, currentSubLinesCount, lineInfo.decType, lineInfo.asmtType, lineInfo.rhsAssign, lineInfo.opType)
 				if ((!options[n].declarationsComplete) && (featureBuilder.areDeclarationsComplete(options[n].features.totalVars))) options[n].declarationsComplete = true
 
 				bool rejectBranch = featureBuilder.rejectBranch(options[n].features, options[n].declarationsComplete, linesRemaining)
